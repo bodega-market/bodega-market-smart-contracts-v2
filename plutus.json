@@ -1,0 +1,14 @@
+{
+  "preamble": {
+    "title": "aiken-lang/market-contracts-beta",
+    "description": "Aiken contracts for project 'aiken-lang/market-contracts-beta'",
+    "version": "0.0.0",
+    "plutusVersion": "v3",
+    "compiler": {
+      "name": "Aiken",
+      "version": "v1.1.4+79d0e45"
+    },
+    "license": "Apache-2.0"
+  },
+  "validators": []
+}
