@@ -10,6 +10,7 @@ pub type Asset {
 }
 
 pub type ProjectInfoDatum {
+  owner_pkh: 
   project_name: ByteArray,
   deadline: Int,
   payment_policy_id: ByteArray,
@@ -24,13 +25,18 @@ pub type ProjectInfoDatum {
   candidates: List<ByteArray>,
 }
 
+pub type ProjectPredictionDatum {
+  total_fee: Int,
+  predictions: List<Pair<ByteArray, Bool>>,
+}
+
 pub type PSettingDatum {
   pledge: Int,
   pledge_policy_id: ByteArray,
   pledge_token_name: ByteArray,
   protocol_treasury_script_hash: ByteArray,
   share_ratio: Int,
-  // Base: 10000
+  // ^ Base: 10000
   open_fee: Int,
   open_fee_policy_id: ByteArray,
   open_fee_token_name: ByteArray,

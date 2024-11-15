@@ -1,9 +1,8 @@
 use aiken/collection/dict
 use aiken/collection/list
 use aiken/interval
-use bodega/test_constants.{
-  pmanager_nft_asset, pmanager_nft_tn, protocol_nft_policy_id,
-}
+use bodega/constants.{pmanager_nft_tn}
+use bodega/test_constants.{pmanager_nft_asset, protocol_nft_policy_id}
 use bodega/types.{Asset}
 use cardano/address.{from_script}
 use cardano/assets
