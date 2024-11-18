@@ -13,7 +13,7 @@ pub type PATMintRedeemer {
 }
 
 pub fn is_project_info_datum_valid(d: ProjectInfoDatum) -> Bool {
-  d.deadline > 0 && d.admin_fee > 0 && d.envelope_amount > 0
+  d.deadline > 0 && d.admin_fee_percent > 0 && d.envelope_amount > 0
 }
 
 pub fn is_project_prediction_datum_valid(

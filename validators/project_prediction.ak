@@ -1,4 +1,4 @@
-use aiken/collection/dict.{Dict}
+use bodega/types.{ProjectPredictionDatum}
 use cardano/transaction.{OutputReference, Transaction}
 
 pub type ProjectPredictionRedeemer {
@@ -6,10 +6,6 @@ pub type ProjectPredictionRedeemer {
   Update
   PayOut
   Refund
-}
-
-pub type ProjectPredictionDatum {
-  candidate_votes: Dict<ByteArray, Int>,
 }
 
 validator project_prediction {
