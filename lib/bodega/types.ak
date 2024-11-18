@@ -62,3 +62,7 @@ pub type ProjectPredictionParams {
   project_prediction_nft: Asset,
   project_info_nft: Asset,
 }
+
+pub type OracleDatum {
+  candidate: ByteArray,
+}
