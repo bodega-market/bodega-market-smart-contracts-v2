@@ -18,6 +18,7 @@ pub type ProjectInfoDatum {
   batcher_policy_id: ByteArray,
   treasury_script_hash: ByteArray,
   position_script_hash: ByteArray,
+  share_policy_id: ByteArray,
   oracle_policy_id: ByteArray,
   oracle_token_name: ByteArray,
   admin_fee_percent: Int,
@@ -28,7 +29,7 @@ pub type ProjectInfoDatum {
 
 pub type ProjectPredictionDatum {
   total_fee: Int,
-  predictions: List<Pair<ByteArray, Bool>>,
+  predictions: List<Pair<ByteArray, Int>>,
 }
 
 pub type PSettingDatum {
@@ -55,4 +56,9 @@ pub type PositionDatum {
   pos_amount: Int,
   pos_batcher_fee: Int,
   pos_candidate: ByteArray,
+}
+
+pub type ProjectPredictionParams {
+  project_prediction_nft: Asset,
+  project_info_nft: Asset,
 }

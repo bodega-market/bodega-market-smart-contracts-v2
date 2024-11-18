@@ -13,7 +13,9 @@ pub type PATMintRedeemer {
 }
 
 pub fn is_project_info_datum_valid(d: ProjectInfoDatum) -> Bool {
-  d.deadline > 0 && d.admin_fee_percent > 0 && d.envelope_amount > 0
+  let correct_candidates =
+    list.length(list.unique(d.candidates)) == list.length(d.candidates)
+  d.deadline > 0 && d.admin_fee_percent > 0 && d.envelope_amount > 0 && correct_candidates
 }
 
 pub fn is_project_prediction_datum_valid(
@@ -27,7 +29,7 @@ pub fn is_project_prediction_datum_valid(
           fn(idx, cand, acc) {
             expect Some(c) = list.at(candidates, idx)
             let Pair(candidate, amount) = cand
-            acc && candidate == c && amount == False
+            acc && candidate == c && amount == 0
           },
         )
   d.total_fee == 0 && check_candidates

@@ -31,6 +31,7 @@ validator project_info(_seed: OutputReference) {
       own_datum.treasury_script_hash == own_output_datum.treasury_script_hash
     expect
       own_datum.position_script_hash == own_output_datum.position_script_hash
+    expect own_datum.share_policy_id == own_output_datum.share_policy_id
     expect own_datum.admin_fee_percent == own_output_datum.admin_fee_percent
     expect own_datum.envelope_amount == own_output_datum.envelope_amount
     expect own_datum.candidates == own_output_datum.candidates
