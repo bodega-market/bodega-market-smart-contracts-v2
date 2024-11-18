@@ -6,7 +6,7 @@ use bodega/types.{
 use bodega/utils.{
   decimals, find_license_deadline, find_posix_time_range, multiplier,
 }
-use cardano/address
+use cardano/address.{from_script}
 use cardano/assets.{flatten}
 use cardano/transaction.{
   InlineDatum, Input, Output, OutputReference, Transaction,
@@ -35,7 +35,13 @@ pub type ProjectPredictionRedeemer {
     license_idx: Int,
     pos_indices: List<(Int, Int)>,
   }
-  WithdrawFee
+  WithdrawFee {
+    own_input_idx: Int,
+    own_output_idx: Int,
+    project_info_idx: Int,
+    license_idx: Int,
+    treasury_out_idx: Int,
+  }
 }
 
 validator project_prediction(params: ProjectPredictionParams) {
@@ -565,7 +571,94 @@ validator project_prediction(params: ProjectPredictionParams) {
         expect total_input_shares == total_pos_count_shares
         expected_mint == mint
       }
-      WithdrawFee -> True
+      WithdrawFee {
+        own_input_idx,
+        own_output_idx,
+        project_info_idx,
+        license_idx,
+        treasury_out_idx,
+      } -> {
+        let Transaction {
+          inputs,
+          reference_inputs,
+          outputs,
+          validity_range,
+          ..
+        } = self
+        expect Some(own_input) = list.at(inputs, own_input_idx)
+        expect Some(own_output) = list.at(outputs, own_output_idx)
+        expect Some(Input { output: Output { value: batcher_value, .. }, .. }) =
+          list.at(inputs, license_idx)
+        expect Some(project_info_ref_input) =
+          list.at(reference_inputs, project_info_idx)
+        expect
+          assets.quantity_of(
+            project_info_ref_input.output.value,
+            params.project_info_nft.policy_id,
+            params.project_info_nft.asset_name,
+          ) == 1
+        expect InlineDatum(project_info_inline_datum) =
+          project_info_ref_input.output.datum
+        expect project_info_datum: ProjectInfoDatum = project_info_inline_datum
+        let license_deadline =
+          find_license_deadline(
+            project_info_datum.batcher_policy_id,
+            batcher_value,
+          )
+        let (_start_valid_time_range, end_valid_time_range) =
+          find_posix_time_range(validity_range)
+        expect license_deadline >= end_valid_time_range
+        expect InlineDatum(own_output_inline_datum) = own_output.datum
+        expect own_output_datum: ProjectPredictionDatum =
+          own_output_inline_datum
+        expect
+          assets.quantity_of(
+            own_input.output.value,
+            params.project_prediction_nft.policy_id,
+            params.project_prediction_nft.asset_name,
+          ) == 1
+        expect
+          assets.quantity_of(
+            own_output.value,
+            params.project_prediction_nft.policy_id,
+            params.project_prediction_nft.asset_name,
+          ) == 1
+        expect Some(Output {
+          address: treasury_address,
+          value: treasury_value,
+          ..
+        }) = list.at(outputs, treasury_out_idx)
+        expect
+          from_script(project_info_datum.treasury_script_hash) == treasury_address
+        let flatten_own_output_value = assets.flatten(own_output.value)
+        expect list.length(flatten_own_output_value) <= 3
+        let input_payment =
+          assets.quantity_of(
+            own_input.output.value,
+            project_info_datum.payment_policy_id,
+            project_info_datum.payment_token_name,
+          )
+        let output_payment =
+          assets.quantity_of(
+            own_output.value,
+            project_info_datum.payment_policy_id,
+            project_info_datum.payment_token_name,
+          )
+        let input_lovelace = assets.lovelace_of(own_input.output.value)
+        let output_lovelace = assets.lovelace_of(own_output.value)
+        when project_info_datum.payment_policy_id == assets.ada_policy_id is {
+          True -> {
+            expect
+              assets.lovelace_of(treasury_value) >= own_input_datum.total_fee
+            expect input_lovelace <= output_lovelace + own_input_datum.total_fee
+          }
+          False -> {
+            expect input_payment == output_payment
+          }
+        }
+        expect own_input_datum.predictions == own_output_datum.predictions
+        own_output_datum.total_fee == 0
+      }
     }
   }
 
