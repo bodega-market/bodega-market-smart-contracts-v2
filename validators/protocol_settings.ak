@@ -14,7 +14,7 @@ pub type PSettingRedeemer {
   pmanager_in_idx: Int,
 }
 
-validator protocol_settings(psettings_nft: Asset) {
+validator protocol_settings(pmanager_nft: Asset) {
   spend(
     _datum: Option<PSettingDatum>,
     redeemer: PSettingRedeemer,
@@ -25,8 +25,8 @@ validator protocol_settings(psettings_nft: Asset) {
     expect Some(psetting_input) = list.at(inputs, redeemer.pmanager_in_idx)
     assets.quantity_of(
       psetting_input.output.value,
-      psettings_nft.policy_id,
-      psettings_nft.asset_name,
+      pmanager_nft.policy_id,
+      pmanager_nft.asset_name,
     ) == 1
   }
 
@@ -101,7 +101,7 @@ test protocol_settings__spend() {
     }
   protocol_settings.spend(
     pmanager_nft_asset,
-    None,
+    Some(psetting_datum),
     psetting_redeemer,
     psetting_ref,
     tx,

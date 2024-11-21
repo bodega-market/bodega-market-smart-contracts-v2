@@ -12,7 +12,7 @@ pub type PTreasuryRedeemer {
   pmanager_in_idx: Int,
 }
 
-validator protocol_treasury(psettings_nft: Asset) {
+validator protocol_treasury(pmanager_nft: Asset) {
   spend(
     _datum: Option<Data>,
     redeemer: PTreasuryRedeemer,
@@ -23,8 +23,8 @@ validator protocol_treasury(psettings_nft: Asset) {
     expect Some(psetting_input) = list.at(inputs, redeemer.pmanager_in_idx)
     assets.quantity_of(
       psetting_input.output.value,
-      psettings_nft.policy_id,
-      psettings_nft.asset_name,
+      pmanager_nft.policy_id,
+      pmanager_nft.asset_name,
     ) == 1
   }
 
