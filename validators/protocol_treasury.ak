@@ -20,9 +20,9 @@ validator protocol_treasury(pmanager_nft: Asset) {
     self: Transaction,
   ) {
     let Transaction { inputs, .. } = self
-    expect Some(psetting_input) = list.at(inputs, redeemer.pmanager_in_idx)
+    expect Some(pmanager_input) = list.at(inputs, redeemer.pmanager_in_idx)
     assets.quantity_of(
-      psetting_input.output.value,
+      pmanager_input.output.value,
       pmanager_nft.policy_id,
       pmanager_nft.asset_name,
     ) == 1

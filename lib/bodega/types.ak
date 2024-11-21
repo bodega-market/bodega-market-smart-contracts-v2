@@ -47,6 +47,7 @@ pub type PSettingDatum {
 pub type PositionType {
   BuyPos
   RewardPos
+  RefundPos
 }
 
 pub type PositionDatum {
