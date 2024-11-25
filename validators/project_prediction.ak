@@ -1,6 +1,15 @@
+use aiken/collection/dict
 use aiken/collection/list
+use aiken/interval.{Finite, Interval, IntervalBound}
+use aiken/primitive/string
+use bodega/constants.{project_info_nft_tn, project_prediction_nft_tn}
+use bodega/test_constants.{
+  license_symbol, payment_policy_id, payment_token_name, project_info_nft_asset,
+  project_info_nft_policy_id, project_prediction_nft_asset,
+  project_prediction_nft_policy_id, share_policy_id,
+}
 use bodega/types.{
-  OracleDatum, PositionDatum, ProjectInfoDatum, ProjectPredictionDatum,
+  BuyPos, OracleDatum, PositionDatum, ProjectInfoDatum, ProjectPredictionDatum,
   ProjectPredictionParams,
 }
 use bodega/utils.{
@@ -9,7 +18,7 @@ use bodega/utils.{
 use cardano/address.{from_script}
 use cardano/assets.{flatten}
 use cardano/transaction.{
-  InlineDatum, Input, Output, OutputReference, Transaction,
+  InlineDatum, Input, NoDatum, Output, OutputReference, Transaction,
 }
 
 pub type ProjectPredictionRedeemer {
@@ -665,4 +674,191 @@ validator project_prediction(params: ProjectPredictionParams) {
   else(_) {
     fail
   }
+}
+
+test predictions__spend_apply() {
+  let project_info_datum =
+    ProjectInfoDatum {
+      owner_pkh: #"f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50",
+      project_name: "test",
+      deadline: 123_456,
+      payment_policy_id: #"3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe",
+      payment_token_name: "token_name",
+      batcher_policy_id: #"6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e",
+      treasury_script_hash: #"f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2",
+      position_script_hash: #"702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86",
+      share_policy_id: #"2d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c425",
+      oracle_policy_id: #"f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9",
+      oracle_token_name: "oracle_token_name",
+      admin_fee_percent: 500,
+      // ^ base 10_000
+      envelope_amount: 2_000_000,
+      candidates: ["cand_1", "cand_2"],
+    }
+  let project_info_ref =
+    OutputReference {
+      transaction_id: #"b4971034feee28d07f157faf99b850",
+      output_index: 0,
+    }
+  let project_info_input =
+    Input {
+      output_reference: project_info_ref,
+      output: Output {
+        address: from_script(#"11"),
+        value: assets.zero
+          |> assets.add(project_info_nft_policy_id, project_info_nft_tn, 1),
+        datum: InlineDatum(project_info_datum),
+        reference_script: None,
+      },
+    }
+  let params =
+    ProjectPredictionParams {
+      project_prediction_nft: project_prediction_nft_asset,
+      project_info_nft: project_info_nft_asset,
+    }
+  let pred_datum =
+    ProjectPredictionDatum {
+      total_fee: 0,
+      predictions: [Pair("cand_1", 0), Pair("cand_2", 0)],
+    }
+  let own_ref =
+    OutputReference {
+      transaction_id: #"b4971034feee28d07f157faf99b850f856d8da3494c70b19b521cfe690258e26",
+      output_index: 0,
+    }
+  let pred_input =
+    Input {
+      output_reference: own_ref,
+      output: Output {
+        address: from_script(#""),
+        value: assets.from_lovelace(2_000_000)
+          |> assets.add(
+              project_prediction_nft_policy_id,
+              project_prediction_nft_tn,
+              1,
+            ),
+        datum: InlineDatum(pred_datum),
+        reference_script: None,
+      },
+    }
+  let pred_out_datum =
+    ProjectPredictionDatum {
+      total_fee: 500000,
+      predictions: [Pair("cand_1", 10), Pair("cand_2", 0)],
+    }
+  let pred_out =
+    Output {
+      address: from_script(#""),
+      value: assets.from_lovelace(2_500_000)
+        |> assets.add(
+            project_prediction_nft_policy_id,
+            project_prediction_nft_tn,
+            1,
+          )
+        |> assets.add(payment_policy_id, payment_token_name, 10 * decimals),
+      datum: InlineDatum(pred_out_datum),
+      reference_script: None,
+    }
+  let pos_datum =
+    PositionDatum {
+      pos_user_pkh: #"6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b",
+      pos_user_stake_key: #"c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3",
+      pos_type: BuyPos,
+      pos_amount: 10,
+      pos_batcher_fee: 30_000,
+      pos_candidate: "cand_1",
+    }
+  let pos_ref =
+    OutputReference {
+      transaction_id: #"b4971034feee28d07f157faf99b850",
+      output_index: 0,
+    }
+  let pos_input =
+    Input {
+      output_reference: pos_ref,
+      output: Output {
+        address: from_script(#"11"),
+        value: assets.zero
+          |> assets.add(share_policy_id, pos_datum.pos_candidate, 10)
+          |> assets.add(payment_policy_id, payment_token_name, 10 * decimals),
+        datum: InlineDatum(pos_datum),
+        reference_script: None,
+      },
+    }
+  let user_pos_out =
+    Output {
+      address: address.from_verification_key(pos_datum.pos_user_pkh)
+        |> address.with_delegation_key(pos_datum.pos_user_stake_key),
+      value: assets.from_lovelace(2_000_000)
+        |> assets.add(share_policy_id, pos_datum.pos_candidate, 10),
+      datum: InlineDatum(pos_datum),
+      reference_script: None,
+    }
+  let license_input =
+    Input {
+      output_reference: OutputReference {
+        transaction_id: #"07f157faf99b850b4971034feee28d",
+        output_index: 0,
+      },
+      output: Output {
+        address: from_script(#"12"),
+        value: assets.add(
+          assets.zero,
+          license_symbol,
+          string.to_bytearray(@"1727715600000"),
+          1,
+        ),
+        datum: NoDatum,
+        reference_script: None,
+      },
+    }
+  let license_output =
+    Output {
+      address: from_script(#"12"),
+      value: assets.add(
+        assets.zero,
+        license_symbol,
+        string.to_bytearray(@"1727715600000"),
+        1,
+      ),
+      datum: NoDatum,
+      reference_script: None,
+    }
+  let tx =
+    Transaction {
+      inputs: [pred_input, pos_input, license_input],
+      reference_inputs: [project_info_input],
+      outputs: [pred_out, user_pos_out, license_output],
+      fee: 0,
+      mint: assets.zero,
+      certificates: [],
+      withdrawals: [],
+      validity_range: Interval {
+        lower_bound: IntervalBound {
+          bound_type: Finite(1727453227635),
+          is_inclusive: False,
+        },
+        upper_bound: IntervalBound {
+          bound_type: Finite(1727456400000),
+          is_inclusive: False,
+        },
+      },
+      extra_signatories: [],
+      redeemers: [],
+      datums: dict.empty,
+      id: #"0000000000000000000000000000000000000000000000000000000000000000",
+      votes: [],
+      proposal_procedures: [],
+      current_treasury_amount: None,
+      treasury_donation: None,
+    }
+  let pred_redeemer =
+    Apply {
+      own_input_idx: 0,
+      own_output_idx: 0,
+      project_info_idx: 0,
+      license_idx: 2,
+      pos_indices: [(1, 1)],
+    }
+  project_prediction.spend(params, Some(pred_datum), pred_redeemer, own_ref, tx)
 }
