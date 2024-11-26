@@ -4,9 +4,9 @@ use aiken/interval.{Finite, Interval, IntervalBound}
 use aiken/primitive/string
 use bodega/constants.{project_info_nft_tn, project_prediction_nft_tn}
 use bodega/test_constants.{
-  license_symbol, payment_policy_id, payment_token_name, project_info_nft_asset,
-  project_info_nft_policy_id, project_prediction_nft_asset,
-  project_prediction_nft_policy_id, share_policy_id,
+  license_symbol, project_info_nft_asset, project_info_nft_policy_id,
+  project_prediction_nft_asset, project_prediction_nft_policy_id,
+  share_policy_id,
 }
 use bodega/types.{
   BuyPos, OracleDatum, PositionDatum, ProjectInfoDatum, ProjectPredictionDatum,
@@ -116,13 +116,13 @@ validator project_prediction(params: ProjectPredictionParams) {
             params.project_prediction_nft.policy_id,
             params.project_prediction_nft.asset_name,
           ) == 1
-        let (total_in_pos_values, total_fee) =
+        let (total_in_pos_values, total_in_shares, total_fee) =
           list.foldl(
             pos_indices,
-            (assets.zero, 0),
+            (assets.zero, 0, 0),
             fn(curr, acc) {
               let (in_idx, out_idx) = curr
-              let (cur_val, cur_total_fee) = acc
+              let (cur_val, cur_shares, cur_total_fee) = acc
               expect Some(in) = list.at(inputs, in_idx)
               expect Some(out) = list.at(outputs, out_idx)
               expect InlineDatum(pos_inline_datum) = in.output.datum
@@ -139,6 +139,7 @@ validator project_prediction(params: ProjectPredictionParams) {
                   project_info_datum.share_policy_id,
                   pos_datum.pos_candidate,
                 )
+              expect num_candidate_shares == pos_datum.pos_amount
               expect
                 [
                   (
@@ -154,12 +155,41 @@ validator project_prediction(params: ProjectPredictionParams) {
                 ] == assets.flatten(out.value)
               (
                 assets.merge(cur_val, in.output.value),
+                cur_shares + num_candidate_shares,
                 cur_total_fee + pos_datum.pos_amount * project_info_datum.admin_fee_percent * decimals / multiplier,
               )
             },
           )
+        let flatten_own_output_value = assets.flatten(own_output.value)
+        let input_lovelace = assets.lovelace_of(own_input.output.value)
+        let output_lovelace = assets.lovelace_of(own_output.value)
+        when project_info_datum.payment_policy_id == assets.ada_policy_id is {
+          True -> {
+            expect list.length(flatten_own_output_value) == 2
+            expect
+              input_lovelace + total_in_shares * decimals + total_fee <= output_lovelace
+          }
+          False -> {
+            let input_payment =
+              assets.quantity_of(
+                own_input.output.value,
+                project_info_datum.payment_policy_id,
+                project_info_datum.payment_token_name,
+              )
+            let output_payment =
+              assets.quantity_of(
+                own_output.value,
+                project_info_datum.payment_policy_id,
+                project_info_datum.payment_token_name,
+              )
+            expect list.length(flatten_own_output_value) <= 3
+            expect
+              input_payment + total_in_shares * decimals + total_fee <= output_payment
+            expect input_lovelace <= output_lovelace
+          }
+        }
         expect
-          own_output_datum.total_fee >= own_input_datum.total_fee + total_fee
+          own_output_datum.total_fee == own_input_datum.total_fee + total_fee
         let in_prediction_length = list.length(own_input_datum.predictions)
         expect in_prediction_length == list.length(own_output_datum.predictions)
         let zip_in_out =
@@ -741,21 +771,32 @@ test predictions__spend_apply() {
         reference_script: None,
       },
     }
+  let amount = 10
+  let fee = 10 * project_info_datum.admin_fee_percent * decimals / multiplier
   let pred_out_datum =
     ProjectPredictionDatum {
-      total_fee: 500000,
+      total_fee: pred_datum.total_fee + fee,
       predictions: [Pair("cand_1", 10), Pair("cand_2", 0)],
     }
   let pred_out =
     Output {
       address: from_script(#""),
-      value: assets.from_lovelace(2_500_000)
+      value: assets.from_lovelace(2_000_000)
         |> assets.add(
             project_prediction_nft_policy_id,
             project_prediction_nft_tn,
             1,
           )
-        |> assets.add(payment_policy_id, payment_token_name, 10 * decimals),
+        |> assets.add(
+            project_info_datum.payment_policy_id,
+            project_info_datum.payment_token_name,
+            amount * decimals,
+          )
+        |> assets.add(
+            project_info_datum.payment_policy_id,
+            project_info_datum.payment_token_name,
+            fee,
+          ),
       datum: InlineDatum(pred_out_datum),
       reference_script: None,
     }
@@ -764,7 +805,7 @@ test predictions__spend_apply() {
       pos_user_pkh: #"6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b",
       pos_user_stake_key: #"c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3",
       pos_type: BuyPos,
-      pos_amount: 10,
+      pos_amount: amount,
       pos_batcher_fee: 30_000,
       pos_candidate: "cand_1",
     }
@@ -780,7 +821,11 @@ test predictions__spend_apply() {
         address: from_script(#"11"),
         value: assets.zero
           |> assets.add(share_policy_id, pos_datum.pos_candidate, 10)
-          |> assets.add(payment_policy_id, payment_token_name, 10 * decimals),
+          |> assets.add(
+              project_info_datum.payment_policy_id,
+              project_info_datum.payment_token_name,
+              10 * decimals,
+            ),
         datum: InlineDatum(pos_datum),
         reference_script: None,
       },
@@ -790,7 +835,209 @@ test predictions__spend_apply() {
       address: address.from_verification_key(pos_datum.pos_user_pkh)
         |> address.with_delegation_key(pos_datum.pos_user_stake_key),
       value: assets.from_lovelace(2_000_000)
-        |> assets.add(share_policy_id, pos_datum.pos_candidate, 10),
+        |> assets.add(share_policy_id, pos_datum.pos_candidate, amount),
+      datum: InlineDatum(pos_datum),
+      reference_script: None,
+    }
+  let license_input =
+    Input {
+      output_reference: OutputReference {
+        transaction_id: #"07f157faf99b850b4971034feee28d",
+        output_index: 0,
+      },
+      output: Output {
+        address: from_script(#"12"),
+        value: assets.add(
+          assets.zero,
+          license_symbol,
+          string.to_bytearray(@"1727715600000"),
+          1,
+        ),
+        datum: NoDatum,
+        reference_script: None,
+      },
+    }
+  let license_output =
+    Output {
+      address: from_script(#"12"),
+      value: assets.add(
+        assets.zero,
+        license_symbol,
+        string.to_bytearray(@"1727715600000"),
+        1,
+      ),
+      datum: NoDatum,
+      reference_script: None,
+    }
+  let tx =
+    Transaction {
+      inputs: [pred_input, pos_input, license_input],
+      reference_inputs: [project_info_input],
+      outputs: [pred_out, user_pos_out, license_output],
+      fee: 0,
+      mint: assets.zero,
+      certificates: [],
+      withdrawals: [],
+      validity_range: Interval {
+        lower_bound: IntervalBound {
+          bound_type: Finite(1727453227635),
+          is_inclusive: False,
+        },
+        upper_bound: IntervalBound {
+          bound_type: Finite(1727456400000),
+          is_inclusive: False,
+        },
+      },
+      extra_signatories: [],
+      redeemers: [],
+      datums: dict.empty,
+      id: #"0000000000000000000000000000000000000000000000000000000000000000",
+      votes: [],
+      proposal_procedures: [],
+      current_treasury_amount: None,
+      treasury_donation: None,
+    }
+  let pred_redeemer =
+    Apply {
+      own_input_idx: 0,
+      own_output_idx: 0,
+      project_info_idx: 0,
+      license_idx: 2,
+      pos_indices: [(1, 1)],
+    }
+  project_prediction.spend(params, Some(pred_datum), pred_redeemer, own_ref, tx)
+}
+
+test predictions__spend_apply__ada() {
+  let project_info_datum =
+    ProjectInfoDatum {
+      owner_pkh: #"f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50",
+      project_name: "test",
+      deadline: 123_456,
+      payment_policy_id: #"",
+      payment_token_name: "",
+      batcher_policy_id: #"6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e",
+      treasury_script_hash: #"f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2",
+      position_script_hash: #"702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86",
+      share_policy_id: #"2d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c425",
+      oracle_policy_id: #"f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9",
+      oracle_token_name: "oracle_token_name",
+      admin_fee_percent: 500,
+      // ^ base 10_000
+      envelope_amount: 2_000_000,
+      candidates: ["cand_1", "cand_2"],
+    }
+  let project_info_ref =
+    OutputReference {
+      transaction_id: #"b4971034feee28d07f157faf99b850",
+      output_index: 0,
+    }
+  let project_info_input =
+    Input {
+      output_reference: project_info_ref,
+      output: Output {
+        address: from_script(#"11"),
+        value: assets.zero
+          |> assets.add(project_info_nft_policy_id, project_info_nft_tn, 1),
+        datum: InlineDatum(project_info_datum),
+        reference_script: None,
+      },
+    }
+  let params =
+    ProjectPredictionParams {
+      project_prediction_nft: project_prediction_nft_asset,
+      project_info_nft: project_info_nft_asset,
+    }
+  let pred_datum =
+    ProjectPredictionDatum {
+      total_fee: 0,
+      predictions: [Pair("cand_1", 0), Pair("cand_2", 0)],
+    }
+  let own_ref =
+    OutputReference {
+      transaction_id: #"b4971034feee28d07f157faf99b850f856d8da3494c70b19b521cfe690258e26",
+      output_index: 0,
+    }
+  let pred_input =
+    Input {
+      output_reference: own_ref,
+      output: Output {
+        address: from_script(#""),
+        value: assets.from_lovelace(2_000_000)
+          |> assets.add(
+              project_prediction_nft_policy_id,
+              project_prediction_nft_tn,
+              1,
+            ),
+        datum: InlineDatum(pred_datum),
+        reference_script: None,
+      },
+    }
+  let amount = 10
+  let fee = 10 * project_info_datum.admin_fee_percent * decimals / multiplier
+  let pred_out_datum =
+    ProjectPredictionDatum {
+      total_fee: pred_datum.total_fee + fee,
+      predictions: [Pair("cand_1", 10), Pair("cand_2", 0)],
+    }
+  let pred_out =
+    Output {
+      address: from_script(#""),
+      value: assets.from_lovelace(2_000_000)
+        |> assets.add(
+            project_prediction_nft_policy_id,
+            project_prediction_nft_tn,
+            1,
+          )
+        |> assets.add(
+            project_info_datum.payment_policy_id,
+            project_info_datum.payment_token_name,
+            amount * decimals,
+          )
+        |> assets.add(
+            project_info_datum.payment_policy_id,
+            project_info_datum.payment_token_name,
+            fee,
+          ),
+      datum: InlineDatum(pred_out_datum),
+      reference_script: None,
+    }
+  let pos_datum =
+    PositionDatum {
+      pos_user_pkh: #"6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b",
+      pos_user_stake_key: #"c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3",
+      pos_type: BuyPos,
+      pos_amount: amount,
+      pos_batcher_fee: 30_000,
+      pos_candidate: "cand_1",
+    }
+  let pos_ref =
+    OutputReference {
+      transaction_id: #"b4971034feee28d07f157faf99b850",
+      output_index: 0,
+    }
+  let pos_input =
+    Input {
+      output_reference: pos_ref,
+      output: Output {
+        address: from_script(#"11"),
+        value: assets.zero
+          |> assets.add(share_policy_id, pos_datum.pos_candidate, 10)
+          |> assets.add(
+              project_info_datum.payment_policy_id,
+              project_info_datum.payment_token_name,
+              10 * decimals,
+            ),
+        datum: InlineDatum(pos_datum),
+        reference_script: None,
+      },
+    }
+  let user_pos_out =
+    Output {
+      address: address.from_verification_key(pos_datum.pos_user_pkh)
+        |> address.with_delegation_key(pos_datum.pos_user_stake_key),
+      value: assets.from_lovelace(2_000_000)
+        |> assets.add(share_policy_id, pos_datum.pos_candidate, amount),
       datum: InlineDatum(pos_datum),
       reference_script: None,
     }
