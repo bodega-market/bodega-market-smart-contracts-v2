@@ -1,10 +1,15 @@
+use aiken/collection/dict
 use aiken/collection/list
+use aiken/interval
+use aiken/primitive/string
 use bodega/constants.{project_info_nft_tn, project_prediction_nft_tn}
 use bodega/types.{PSettingDatum, ProjectInfoDatum, ProjectPredictionDatum}
-use cardano/address.{Inline, Script}
+use cardano/address.{Inline, Script, from_script, from_verification_key}
 use cardano/address/credential
 use cardano/assets.{PolicyId, flatten}
-use cardano/transaction.{InlineDatum, OutputReference, Transaction}
+use cardano/transaction.{
+  InlineDatum, Input, NoDatum, Output, OutputReference, Transaction,
+}
 
 pub type PATMintRedeemer {
   protocol_setting_ref_idx: Int,
@@ -41,7 +46,7 @@ validator project_authtoken_mp(
   project_prediction_script_hash: ByteArray,
   protocol_stake_key_hash: ByteArray,
   psettings_nft_policy_id: ByteArray,
-  psettings_nft_policy_tn: ByteArray,
+  psettings_nft_tn: ByteArray,
 ) {
   mint(redeemer: PATMintRedeemer, policy_id: PolicyId, self: Transaction) {
     let Transaction { mint, outputs, inputs, reference_inputs, .. } = self
@@ -51,7 +56,7 @@ validator project_authtoken_mp(
       assets.quantity_of(
         ref_protocol_setting_input.output.value,
         psettings_nft_policy_id,
-        psettings_nft_policy_tn,
+        psettings_nft_tn,
       ) == 1
     expect InlineDatum(protocol_setting_inline_datum) =
       ref_protocol_setting_input.output.datum
@@ -59,11 +64,7 @@ validator project_authtoken_mp(
     expect
       list.any(
         inputs,
-        fn(inp) {
-          trace seed
-          trace inp.output_reference
-          inp.output_reference.transaction_id == seed.transaction_id
-        },
+        fn(inp) { inp.output_reference.transaction_id == seed.transaction_id },
       )
     let project_info_nft = assets.from_asset(policy_id, project_info_nft_tn, 1)
     let project_prediction_nft =
@@ -131,4 +132,140 @@ validator project_authtoken_mp(
   else(_) {
     fail
   }
+}
+
+test project_authtoken_mp_success() {
+  let own_ref =
+    OutputReference {
+      transaction_id: #"b4971034feee28d07f157faf99b850f856d8da3494c70b19b521cfe690258e26",
+      output_index: 0,
+    }
+  let seed_input =
+    Input {
+      output_reference: own_ref,
+      output: Output {
+        address: from_verification_key(#""),
+        value: assets.from_lovelace(2_000_000),
+        datum: NoDatum,
+        reference_script: None,
+      },
+    }
+  let own_policy_id =
+    #"a5ff2c36e9eeb9655d06c0a2f02d9e200aa6f8db00d760acf62c0eba"
+  let project_info_script_hash =
+    #"8db00d760acf62c0ebaa5ff2c36e9eeb9655d06c0a2f02d9e200aa6f"
+  let project_prediction_script_hash =
+    #"9655d06c0a2f02d9e200aa6f8db00d760acf62c0ebaa5ff2c36e9eeb"
+  let protocol_stake_key_hash =
+    #"a2f02d9e200aa6f8db00d760acf62c0ebaa5ff2c36e9eeb9655d06c0"
+  let psettings_nft_policy_id =
+    #"2f02d9e200aa6f8db00d760acf62c0ebaa5ff2c36e9eeb9655d06c0a"
+  let psettings_nft_tn = string.to_bytearray(@"PROTOCOL_SETTINGS_NFT")
+  let mint =
+    assets.from_asset(own_policy_id, project_info_nft_tn, 1)
+      |> assets.add(own_policy_id, project_prediction_nft_tn, 1)
+  let psetting_datum =
+    PSettingDatum {
+      pledge: 100_000_000,
+      pledge_policy_id: #"",
+      pledge_token_name: #"",
+      protocol_treasury_script_hash: #"b4971034feee",
+      share_ratio: 20000,
+      open_fee: 20_000_000,
+      open_fee_policy_id: #"",
+      open_fee_token_name: #"",
+    }
+  let psetting_ref =
+    OutputReference {
+      transaction_id: #"b4971034feee28d07f157faf99b850",
+      output_index: 0,
+    }
+  let psetting_ref_input =
+    Input {
+      output_reference: psetting_ref,
+      output: Output {
+        address: from_script(#"11"),
+        value: assets.zero
+          |> assets.add(psettings_nft_policy_id, psettings_nft_tn, 1),
+        datum: InlineDatum(psetting_datum),
+        reference_script: None,
+      },
+    }
+  let project_info_datum =
+    ProjectInfoDatum {
+      owner_pkh: #"f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50",
+      project_name: "test",
+      deadline: 123_456,
+      payment_policy_id: #"3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe",
+      payment_token_name: "token_name",
+      batcher_policy_id: #"6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e",
+      treasury_script_hash: #"f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2",
+      position_script_hash: #"702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86",
+      share_policy_id: #"2d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c425",
+      oracle_policy_id: #"f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9",
+      oracle_token_name: "oracle_token_name",
+      admin_fee_percent: 500,
+      // ^ base 10_000
+      envelope_amount: 2_000_000,
+      candidates: ["cand_1", "cand_2"],
+    }
+  let project_info_output =
+    Output {
+      address: from_script(project_info_script_hash)
+        |> address.with_delegation_script(protocol_stake_key_hash),
+      value: assets.from_lovelace(100_000_000)
+        |> assets.add(own_policy_id, project_info_nft_tn, 1),
+      datum: InlineDatum(project_info_datum),
+      reference_script: None,
+    }
+  let pred_datum =
+    ProjectPredictionDatum {
+      total_fee: 0,
+      predictions: [Pair("cand_1", 0), Pair("cand_2", 0)],
+    }
+  let pred_output =
+    Output {
+      address: from_script(project_prediction_script_hash)
+        |> address.with_delegation_script(protocol_stake_key_hash),
+      value: assets.from_lovelace(2_000_000)
+        |> assets.add(own_policy_id, project_prediction_nft_tn, 1),
+      datum: InlineDatum(pred_datum),
+      reference_script: None,
+    }
+  let tx =
+    Transaction {
+      inputs: [seed_input],
+      reference_inputs: [psetting_ref_input],
+      outputs: [project_info_output, pred_output],
+      fee: 0,
+      mint,
+      certificates: [],
+      withdrawals: [],
+      validity_range: interval.everything,
+      extra_signatories: [],
+      redeemers: [],
+      datums: dict.empty,
+      id: #"0000000000000000000000000000000000000000000000000000000000000000",
+      votes: [],
+      proposal_procedures: [],
+      current_treasury_amount: None,
+      treasury_donation: None,
+    }
+  let redeemer =
+    PATMintRedeemer {
+      protocol_setting_ref_idx: 0,
+      project_info_out_idx: 0,
+      project_prediction_out_idx: 1,
+    }
+  project_authtoken_mp.mint(
+    own_ref,
+    project_info_script_hash,
+    project_prediction_script_hash,
+    protocol_stake_key_hash,
+    psettings_nft_policy_id,
+    psettings_nft_tn,
+    redeemer,
+    own_policy_id,
+    tx,
+  )
 }
