@@ -121,8 +121,14 @@ validator project_shares(params: ShareParams) {
 }
 
 test shares__mint_reward() {
+  let own_ref_id =
+    OutputReference {
+      transaction_id: #"57faf99b850f856d8da3494c70b19b521cfe690258e26b4971034feee28d07f1",
+      output_index: 0,
+    }
   let pred_datum =
     ProjectPredictionDatum {
+      outref_id: own_ref_id,
       total_fee: 100_000_000,
       predictions: [Pair("cand_1", 10), Pair("cand_2", 20)],
     }
@@ -176,8 +182,14 @@ test shares__mint_reward() {
 }
 
 test shares__mint_refund() {
+  let project_info_ref_id =
+    OutputReference {
+      transaction_id: #"b4971034feee28d07f157faf99b850",
+      output_index: 0,
+    }
   let pred_datum =
     ProjectPredictionDatum {
+      outref_id: project_info_ref_id,
       total_fee: 100_000_000,
       predictions: [Pair("cand_1", 10), Pair("cand_2", 20)],
     }
@@ -231,8 +243,14 @@ test shares__mint_refund() {
 }
 
 test shares__mint_buy() {
+  let project_info_ref_id =
+    OutputReference {
+      transaction_id: #"8c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e664",
+      output_index: 0,
+    }
   let project_info_datum =
     ProjectInfoDatum {
+      outref_id: project_info_ref_id,
       owner_pkh: #"f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50",
       project_name: "test",
       deadline: 1730394000000,
@@ -326,8 +344,14 @@ test shares__mint_buy() {
 }
 
 test shares__mint_buy_incorrect_time_range() fail {
+  let project_info_ref_id =
+    OutputReference {
+      transaction_id: #"28d07f157faf99b850b4971034feee",
+      output_index: 0,
+    }
   let project_info_datum =
     ProjectInfoDatum {
+      outref_id: project_info_ref_id,
       owner_pkh: #"f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50",
       project_name: "test",
       deadline: 1730394000000,
@@ -421,8 +445,14 @@ test shares__mint_buy_incorrect_time_range() fail {
 }
 
 test shares__mint_buy__incorrect_fee() fail {
+  let project_info_ref_id =
+    OutputReference {
+      transaction_id: #"d07f157faf99b850b4971034feee28",
+      output_index: 0,
+    }
   let project_info_datum =
     ProjectInfoDatum {
+      outref_id: project_info_ref_id,
       owner_pkh: #"f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50",
       project_name: "test",
       deadline: 1730394000000,
@@ -516,8 +546,14 @@ test shares__mint_buy__incorrect_fee() fail {
 }
 
 test shares__mint_buy__incorrect_mint() fail {
+  let project_info_ref_id =
+    OutputReference {
+      transaction_id: #"d07f157faf99b850b4971034feee28",
+      output_index: 0,
+    }
   let project_info_datum =
     ProjectInfoDatum {
+      outref_id: project_info_ref_id,
       owner_pkh: #"f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50",
       project_name: "test",
       deadline: 1730394000000,
@@ -611,8 +647,14 @@ test shares__mint_buy__incorrect_mint() fail {
 }
 
 test shares__mint_buy__incorrect_candidate() fail {
+  let project_info_ref_id =
+    OutputReference {
+      transaction_id: #"d07f157faf99b850b4971034feee28",
+      output_index: 0,
+    }
   let project_info_datum =
     ProjectInfoDatum {
+      outref_id: project_info_ref_id,
       owner_pkh: #"f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50",
       project_name: "test",
       deadline: 1730394000000,
@@ -706,8 +748,14 @@ test shares__mint_buy__incorrect_candidate() fail {
 }
 
 test shares__mint_buy__ada_payment() {
+  let project_info_ref_id =
+    OutputReference {
+      transaction_id: #"d07f157faf99b850b4971034feee28",
+      output_index: 0,
+    }
   let project_info_datum =
     ProjectInfoDatum {
+      outref_id: project_info_ref_id,
       owner_pkh: #"f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50",
       project_name: "test",
       deadline: 1730394000000,

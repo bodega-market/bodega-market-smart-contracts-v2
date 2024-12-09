@@ -2,15 +2,16 @@ use aiken/collection/dict
 use aiken/collection/list
 use aiken/interval.{Finite, Interval, IntervalBound}
 use aiken/primitive/string
-use bodega/constants.{project_info_nft_tn, project_prediction_nft_tn}
+use bodega/constants.{
+  project_info_nft_tn, project_prediction_nft_tn, psetting_nft_tn,
+}
 use bodega/test_constants.{
-  license_symbol, project_info_nft_asset, project_info_nft_policy_id,
-  project_prediction_nft_asset, project_prediction_nft_policy_id,
-  share_policy_id,
+  license_symbol, project_info_nft_policy_id, project_prediction_nft_policy_id,
+  protocol_nft_policy_id, share_policy_id,
 }
 use bodega/types.{
-  BuyPos, OracleDatum, PositionDatum, ProjectInfoDatum, ProjectPredictionDatum,
-  ProjectPredictionParams, RefundPos, RewardPos,
+  BuyPos, OracleDatum, PSettingDatum, PositionDatum, ProjectInfoDatum,
+  ProjectPredictionDatum, RefundPos, RewardPos,
 }
 use bodega/utils.{
   decimals, find_license_deadline, find_posix_time_range, multiplier,
@@ -26,6 +27,7 @@ pub type ProjectPredictionRedeemer {
     own_input_idx: Int,
     own_output_idx: Int,
     project_info_idx: Int,
+    protocol_setting_ref_idx: Int,
     license_idx: Int,
     pos_indices: List<(Int, Int)>,
   }
@@ -33,6 +35,7 @@ pub type ProjectPredictionRedeemer {
     own_input_idx: Int,
     own_output_idx: Int,
     project_info_idx: Int,
+    protocol_setting_ref_idx: Int,
     oracle_ref_input_idx: Int,
     license_idx: Int,
     pos_indices: List<(Int, Int)>,
@@ -41,6 +44,7 @@ pub type ProjectPredictionRedeemer {
     own_input_idx: Int,
     own_output_idx: Int,
     project_info_idx: Int,
+    protocol_setting_ref_idx: Int,
     license_idx: Int,
     pos_indices: List<(Int, Int)>,
   }
@@ -48,12 +52,16 @@ pub type ProjectPredictionRedeemer {
     own_input_idx: Int,
     own_output_idx: Int,
     project_info_idx: Int,
+    protocol_setting_ref_idx: Int,
     license_idx: Int,
     treasury_out_idx: Int,
   }
 }
 
-validator project_prediction(params: ProjectPredictionParams) {
+validator project_prediction(
+  psettings_nft_policy_id: ByteArray,
+  psettings_nft_tn: ByteArray,
+) {
   spend(
     option_datum: Option<ProjectPredictionDatum>,
     redeemer: ProjectPredictionRedeemer,
@@ -67,6 +75,7 @@ validator project_prediction(params: ProjectPredictionParams) {
         own_input_idx,
         own_output_idx,
         project_info_idx,
+        protocol_setting_ref_idx,
         license_idx,
         pos_indices,
       } -> {
@@ -77,6 +86,18 @@ validator project_prediction(params: ProjectPredictionParams) {
           validity_range,
           ..
         } = self
+        expect Some(ref_protocol_setting_input) =
+          list.at(reference_inputs, protocol_setting_ref_idx)
+        expect
+          assets.quantity_of(
+            ref_protocol_setting_input.output.value,
+            psettings_nft_policy_id,
+            psettings_nft_tn,
+          ) == 1
+        expect InlineDatum(protocol_setting_inline_datum) =
+          ref_protocol_setting_input.output.datum
+        expect protocol_setting_datum: PSettingDatum =
+          protocol_setting_inline_datum
         expect Some(Input { output: Output { value: batcher_value, .. }, .. }) =
           list.at(inputs, license_idx)
         expect Some(project_info_ref_input) =
@@ -84,8 +105,8 @@ validator project_prediction(params: ProjectPredictionParams) {
         expect
           assets.quantity_of(
             project_info_ref_input.output.value,
-            params.project_info_nft.policy_id,
-            params.project_info_nft.asset_name,
+            protocol_setting_datum.project_authtoken_policy_id,
+            protocol_setting_datum.project_info_token_name,
           ) == 1
         expect InlineDatum(project_info_inline_datum) =
           project_info_ref_input.output.datum
@@ -107,14 +128,14 @@ validator project_prediction(params: ProjectPredictionParams) {
         expect
           assets.quantity_of(
             own_input.output.value,
-            params.project_prediction_nft.policy_id,
-            params.project_prediction_nft.asset_name,
+            protocol_setting_datum.project_authtoken_policy_id,
+            protocol_setting_datum.project_prediction_token_name,
           ) == 1
         expect
           assets.quantity_of(
             own_output.value,
-            params.project_prediction_nft.policy_id,
-            params.project_prediction_nft.asset_name,
+            protocol_setting_datum.project_authtoken_policy_id,
+            protocol_setting_datum.project_prediction_token_name,
           ) == 1
         let (total_in_pos_values, total_in_shares, total_fee) =
           list.foldl(
@@ -189,6 +210,7 @@ validator project_prediction(params: ProjectPredictionParams) {
             expect input_lovelace <= output_lovelace
           }
         }
+        expect own_input_datum.outref_id == own_output_datum.outref_id
         expect
           own_output_datum.total_fee == own_input_datum.total_fee + total_fee
         let in_prediction_length = list.length(own_input_datum.predictions)
@@ -217,6 +239,7 @@ validator project_prediction(params: ProjectPredictionParams) {
         own_input_idx,
         own_output_idx,
         project_info_idx,
+        protocol_setting_ref_idx,
         oracle_ref_input_idx,
         license_idx,
         pos_indices,
@@ -229,6 +252,18 @@ validator project_prediction(params: ProjectPredictionParams) {
           validity_range,
           ..
         } = self
+        expect Some(ref_protocol_setting_input) =
+          list.at(reference_inputs, protocol_setting_ref_idx)
+        expect
+          assets.quantity_of(
+            ref_protocol_setting_input.output.value,
+            psettings_nft_policy_id,
+            psettings_nft_tn,
+          ) == 1
+        expect InlineDatum(protocol_setting_inline_datum) =
+          ref_protocol_setting_input.output.datum
+        expect protocol_setting_datum: PSettingDatum =
+          protocol_setting_inline_datum
         expect Some(Input { output: Output { value: batcher_value, .. }, .. }) =
           list.at(inputs, license_idx)
         expect Some(project_info_ref_input) =
@@ -236,8 +271,8 @@ validator project_prediction(params: ProjectPredictionParams) {
         expect
           assets.quantity_of(
             project_info_ref_input.output.value,
-            params.project_info_nft.policy_id,
-            params.project_info_nft.asset_name,
+            protocol_setting_datum.project_authtoken_policy_id,
+            protocol_setting_datum.project_info_token_name,
           ) == 1
         expect InlineDatum(project_info_inline_datum) =
           project_info_ref_input.output.datum
@@ -269,14 +304,14 @@ validator project_prediction(params: ProjectPredictionParams) {
         expect
           assets.quantity_of(
             own_input.output.value,
-            params.project_prediction_nft.policy_id,
-            params.project_prediction_nft.asset_name,
+            protocol_setting_datum.project_authtoken_policy_id,
+            protocol_setting_datum.project_prediction_token_name,
           ) == 1
         expect
           assets.quantity_of(
             own_output.value,
-            params.project_prediction_nft.policy_id,
-            params.project_prediction_nft.asset_name,
+            protocol_setting_datum.project_authtoken_policy_id,
+            protocol_setting_datum.project_prediction_token_name,
           ) == 1
         let (total_shares, win_shares) =
           list.foldr(
@@ -355,6 +390,7 @@ validator project_prediction(params: ProjectPredictionParams) {
               )
             },
           )
+        expect own_input_datum.outref_id == own_output_datum.outref_id
         expect
           own_input_datum.total_fee + total_fee == own_output_datum.total_fee
         let flatten_own_output_value = assets.flatten(own_output.value)
@@ -418,6 +454,7 @@ validator project_prediction(params: ProjectPredictionParams) {
         own_input_idx,
         own_output_idx,
         project_info_idx,
+        protocol_setting_ref_idx,
         license_idx,
         pos_indices,
       } -> {
@@ -429,6 +466,18 @@ validator project_prediction(params: ProjectPredictionParams) {
           validity_range,
           ..
         } = self
+        expect Some(ref_protocol_setting_input) =
+          list.at(reference_inputs, protocol_setting_ref_idx)
+        expect
+          assets.quantity_of(
+            ref_protocol_setting_input.output.value,
+            psettings_nft_policy_id,
+            psettings_nft_tn,
+          ) == 1
+        expect InlineDatum(protocol_setting_inline_datum) =
+          ref_protocol_setting_input.output.datum
+        expect protocol_setting_datum: PSettingDatum =
+          protocol_setting_inline_datum
         expect Some(Input { output: Output { value: batcher_value, .. }, .. }) =
           list.at(inputs, license_idx)
         expect Some(project_info_ref_input) =
@@ -436,8 +485,8 @@ validator project_prediction(params: ProjectPredictionParams) {
         expect
           assets.quantity_of(
             project_info_ref_input.output.value,
-            params.project_info_nft.policy_id,
-            params.project_info_nft.asset_name,
+            protocol_setting_datum.project_authtoken_policy_id,
+            protocol_setting_datum.project_info_token_name,
           ) == 1
         expect InlineDatum(project_info_inline_datum) =
           project_info_ref_input.output.datum
@@ -459,14 +508,14 @@ validator project_prediction(params: ProjectPredictionParams) {
         expect
           assets.quantity_of(
             own_input.output.value,
-            params.project_prediction_nft.policy_id,
-            params.project_prediction_nft.asset_name,
+            protocol_setting_datum.project_authtoken_policy_id,
+            protocol_setting_datum.project_prediction_token_name,
           ) == 1
         expect
           assets.quantity_of(
             own_output.value,
-            params.project_prediction_nft.policy_id,
-            params.project_prediction_nft.asset_name,
+            protocol_setting_datum.project_authtoken_policy_id,
+            protocol_setting_datum.project_prediction_token_name,
           ) == 1
         let (
           total_in_pos_values,
@@ -531,6 +580,7 @@ validator project_prediction(params: ProjectPredictionParams) {
               )
             },
           )
+        expect own_input_datum.outref_id == own_output_datum.outref_id
         expect
           own_input_datum.total_fee + total_fee == own_output_datum.total_fee
         let flatten_own_output_value = assets.flatten(own_output.value)
@@ -618,6 +668,7 @@ validator project_prediction(params: ProjectPredictionParams) {
         own_input_idx,
         own_output_idx,
         project_info_idx,
+        protocol_setting_ref_idx,
         license_idx,
         treasury_out_idx,
       } -> {
@@ -628,6 +679,18 @@ validator project_prediction(params: ProjectPredictionParams) {
           validity_range,
           ..
         } = self
+        expect Some(ref_protocol_setting_input) =
+          list.at(reference_inputs, protocol_setting_ref_idx)
+        expect
+          assets.quantity_of(
+            ref_protocol_setting_input.output.value,
+            psettings_nft_policy_id,
+            psettings_nft_tn,
+          ) == 1
+        expect InlineDatum(protocol_setting_inline_datum) =
+          ref_protocol_setting_input.output.datum
+        expect protocol_setting_datum: PSettingDatum =
+          protocol_setting_inline_datum
         expect Some(own_input) = list.at(inputs, own_input_idx)
         expect Some(own_output) = list.at(outputs, own_output_idx)
         expect Some(Input { output: Output { value: batcher_value, .. }, .. }) =
@@ -637,8 +700,8 @@ validator project_prediction(params: ProjectPredictionParams) {
         expect
           assets.quantity_of(
             project_info_ref_input.output.value,
-            params.project_info_nft.policy_id,
-            params.project_info_nft.asset_name,
+            protocol_setting_datum.project_authtoken_policy_id,
+            protocol_setting_datum.project_info_token_name,
           ) == 1
         expect InlineDatum(project_info_inline_datum) =
           project_info_ref_input.output.datum
@@ -657,14 +720,14 @@ validator project_prediction(params: ProjectPredictionParams) {
         expect
           assets.quantity_of(
             own_input.output.value,
-            params.project_prediction_nft.policy_id,
-            params.project_prediction_nft.asset_name,
+            protocol_setting_datum.project_authtoken_policy_id,
+            protocol_setting_datum.project_prediction_token_name,
           ) == 1
         expect
           assets.quantity_of(
             own_output.value,
-            params.project_prediction_nft.policy_id,
-            params.project_prediction_nft.asset_name,
+            protocol_setting_datum.project_authtoken_policy_id,
+            protocol_setting_datum.project_prediction_token_name,
           ) == 1
         expect Some(Output {
           address: treasury_address,
@@ -699,6 +762,7 @@ validator project_prediction(params: ProjectPredictionParams) {
             expect input_payment == output_payment + own_input_datum.total_fee
           }
         }
+        expect own_input_datum.outref_id == own_output_datum.outref_id
         expect own_input_datum.predictions == own_output_datum.predictions
         own_output_datum.total_fee == 0
       }
@@ -711,8 +775,14 @@ validator project_prediction(params: ProjectPredictionParams) {
 }
 
 test predictions__spend_apply() {
+  let project_info_ref_id =
+    OutputReference {
+      transaction_id: #"d07f157faf99b850b4971034feee28",
+      output_index: 0,
+    }
   let project_info_datum =
     ProjectInfoDatum {
+      outref_id: project_info_ref_id,
       owner_pkh: #"f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50",
       project_name: "test",
       deadline: 123_456,
@@ -745,13 +815,9 @@ test predictions__spend_apply() {
         reference_script: None,
       },
     }
-  let params =
-    ProjectPredictionParams {
-      project_prediction_nft: project_prediction_nft_asset,
-      project_info_nft: project_info_nft_asset,
-    }
   let pred_datum =
     ProjectPredictionDatum {
+      outref_id: project_info_ref_id,
       total_fee: 0,
       predictions: [Pair("cand_1", 0), Pair("cand_2", 0)],
     }
@@ -779,6 +845,7 @@ test predictions__spend_apply() {
   let fee = 10 * project_info_datum.admin_fee_percent * decimals / multiplier
   let pred_out_datum =
     ProjectPredictionDatum {
+      outref_id: project_info_ref_id,
       total_fee: pred_datum.total_fee + fee,
       predictions: [Pair("cand_1", 10), Pair("cand_2", 0)],
     }
@@ -873,10 +940,41 @@ test predictions__spend_apply() {
       datum: NoDatum,
       reference_script: None,
     }
+  let psetting_datum =
+    PSettingDatum {
+      pledge: 100_000_000,
+      pledge_policy_id: #"",
+      pledge_token_name: #"",
+      protocol_treasury_script_hash: #"b4971034feee",
+      share_ratio: 20000,
+      open_fee: 20_000_000,
+      open_fee_policy_id: #"",
+      open_fee_token_name: #"",
+      project_authtoken_policy_id: project_info_nft_policy_id,
+      project_info_token_name: #"",
+      project_prediction_token_name: #"",
+      protocol_stake_key_hash: #"",
+    }
+  let psetting_ref =
+    OutputReference {
+      transaction_id: #"b4971034feee28d07f157faf99b850",
+      output_index: 0,
+    }
+  let psetting_ref_input =
+    Input {
+      output_reference: psetting_ref,
+      output: Output {
+        address: from_script(#"11"),
+        value: assets.zero
+          |> assets.add(protocol_nft_policy_id, psetting_nft_tn, 1),
+        datum: InlineDatum(psetting_datum),
+        reference_script: None,
+      },
+    }
   let tx =
     Transaction {
       inputs: [pred_input, pos_input, license_input],
-      reference_inputs: [project_info_input],
+      reference_inputs: [project_info_input, psetting_ref_input],
       outputs: [pred_out, user_pos_out, license_output],
       fee: 0,
       mint: assets.zero,
@@ -906,15 +1004,29 @@ test predictions__spend_apply() {
       own_input_idx: 0,
       own_output_idx: 0,
       project_info_idx: 0,
+      protocol_setting_ref_idx: 1,
       license_idx: 2,
       pos_indices: [(1, 1)],
     }
-  project_prediction.spend(params, Some(pred_datum), pred_redeemer, own_ref, tx)
+  project_prediction.spend(
+    protocol_nft_policy_id,
+    psetting_nft_tn,
+    Some(pred_datum),
+    pred_redeemer,
+    own_ref,
+    tx,
+  )
 }
 
 test predictions__spend_apply__ada() {
+  let project_info_ref_id =
+    OutputReference {
+      transaction_id: #"d07f157faf99b850b4971034feee28",
+      output_index: 0,
+    }
   let project_info_datum =
     ProjectInfoDatum {
+      outref_id: project_info_ref_id,
       owner_pkh: #"f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50",
       project_name: "test",
       deadline: 123_456,
@@ -947,13 +1059,9 @@ test predictions__spend_apply__ada() {
         reference_script: None,
       },
     }
-  let params =
-    ProjectPredictionParams {
-      project_prediction_nft: project_prediction_nft_asset,
-      project_info_nft: project_info_nft_asset,
-    }
   let pred_datum =
     ProjectPredictionDatum {
+      outref_id: project_info_ref_id,
       total_fee: 0,
       predictions: [Pair("cand_1", 0), Pair("cand_2", 0)],
     }
@@ -981,6 +1089,7 @@ test predictions__spend_apply__ada() {
   let fee = 10 * project_info_datum.admin_fee_percent * decimals / multiplier
   let pred_out_datum =
     ProjectPredictionDatum {
+      outref_id: project_info_ref_id,
       total_fee: pred_datum.total_fee + fee,
       predictions: [Pair("cand_1", 10), Pair("cand_2", 0)],
     }
@@ -1075,10 +1184,41 @@ test predictions__spend_apply__ada() {
       datum: NoDatum,
       reference_script: None,
     }
+  let psetting_datum =
+    PSettingDatum {
+      pledge: 100_000_000,
+      pledge_policy_id: #"",
+      pledge_token_name: #"",
+      protocol_treasury_script_hash: #"b4971034feee",
+      share_ratio: 20000,
+      open_fee: 20_000_000,
+      open_fee_policy_id: #"",
+      open_fee_token_name: #"",
+      project_authtoken_policy_id: project_info_nft_policy_id,
+      project_info_token_name: #"",
+      project_prediction_token_name: #"",
+      protocol_stake_key_hash: #"",
+    }
+  let psetting_ref =
+    OutputReference {
+      transaction_id: #"b4971034feee28d07f157faf99b850",
+      output_index: 0,
+    }
+  let psetting_ref_input =
+    Input {
+      output_reference: psetting_ref,
+      output: Output {
+        address: from_script(#"11"),
+        value: assets.zero
+          |> assets.add(protocol_nft_policy_id, psetting_nft_tn, 1),
+        datum: InlineDatum(psetting_datum),
+        reference_script: None,
+      },
+    }
   let tx =
     Transaction {
       inputs: [pred_input, pos_input, license_input],
-      reference_inputs: [project_info_input],
+      reference_inputs: [project_info_input, psetting_ref_input],
       outputs: [pred_out, user_pos_out, license_output],
       fee: 0,
       mint: assets.zero,
@@ -1108,15 +1248,29 @@ test predictions__spend_apply__ada() {
       own_input_idx: 0,
       own_output_idx: 0,
       project_info_idx: 0,
+      protocol_setting_ref_idx: 1,
       license_idx: 2,
       pos_indices: [(1, 1)],
     }
-  project_prediction.spend(params, Some(pred_datum), pred_redeemer, own_ref, tx)
+  project_prediction.spend(
+    protocol_nft_policy_id,
+    psetting_nft_tn,
+    Some(pred_datum),
+    pred_redeemer,
+    own_ref,
+    tx,
+  )
 }
 
 test predictions__spend_reward() {
+  let project_info_ref_id =
+    OutputReference {
+      transaction_id: #"d07f157faf99b850b4971034feee28",
+      output_index: 0,
+    }
   let project_info_datum =
     ProjectInfoDatum {
+      outref_id: project_info_ref_id,
       owner_pkh: #"f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50",
       project_name: "test",
       deadline: 123_456,
@@ -1149,13 +1303,9 @@ test predictions__spend_reward() {
         reference_script: None,
       },
     }
-  let params =
-    ProjectPredictionParams {
-      project_prediction_nft: project_prediction_nft_asset,
-      project_info_nft: project_info_nft_asset,
-    }
   let pred_datum =
     ProjectPredictionDatum {
+      outref_id: project_info_ref_id,
       total_fee: 0,
       predictions: [Pair("cand_1", 100), Pair("cand_2", 400)],
     }
@@ -1188,6 +1338,7 @@ test predictions__spend_reward() {
   let fee = 10 * project_info_datum.admin_fee_percent * decimals / multiplier
   let pred_out_datum =
     ProjectPredictionDatum {
+      outref_id: project_info_ref_id,
       total_fee: pred_datum.total_fee + fee,
       predictions: [Pair("cand_1", 90), Pair("cand_2", 400)],
     }
@@ -1309,10 +1460,41 @@ test predictions__spend_reward() {
     }
   let mint =
     assets.from_asset(project_info_datum.share_policy_id, "cand_1", -10)
+  let psetting_datum =
+    PSettingDatum {
+      pledge: 100_000_000,
+      pledge_policy_id: #"",
+      pledge_token_name: #"",
+      protocol_treasury_script_hash: #"b4971034feee",
+      share_ratio: 20000,
+      open_fee: 20_000_000,
+      open_fee_policy_id: #"",
+      open_fee_token_name: #"",
+      project_authtoken_policy_id: project_info_nft_policy_id,
+      project_info_token_name: #"",
+      project_prediction_token_name: #"",
+      protocol_stake_key_hash: #"",
+    }
+  let psetting_ref =
+    OutputReference {
+      transaction_id: #"b4971034feee28d07f157faf99b850",
+      output_index: 0,
+    }
+  let psetting_ref_input =
+    Input {
+      output_reference: psetting_ref,
+      output: Output {
+        address: from_script(#"11"),
+        value: assets.zero
+          |> assets.add(protocol_nft_policy_id, psetting_nft_tn, 1),
+        datum: InlineDatum(psetting_datum),
+        reference_script: None,
+      },
+    }
   let tx =
     Transaction {
       inputs: [pred_input, pos_input, license_input],
-      reference_inputs: [project_info_input, oracle_input],
+      reference_inputs: [project_info_input, oracle_input, psetting_ref_input],
       outputs: [pred_out, user_pos_out, license_output],
       fee: 0,
       mint,
@@ -1343,15 +1525,29 @@ test predictions__spend_reward() {
       own_output_idx: 0,
       project_info_idx: 0,
       oracle_ref_input_idx: 1,
+      protocol_setting_ref_idx: 2,
       license_idx: 2,
       pos_indices: [(1, 1)],
     }
-  project_prediction.spend(params, Some(pred_datum), pred_redeemer, own_ref, tx)
+  project_prediction.spend(
+    protocol_nft_policy_id,
+    psetting_nft_tn,
+    Some(pred_datum),
+    pred_redeemer,
+    own_ref,
+    tx,
+  )
 }
 
 test predictions__spend_reward__ada() {
+  let project_info_ref_id =
+    OutputReference {
+      transaction_id: #"d07f157faf99b850b4971034feee28",
+      output_index: 0,
+    }
   let project_info_datum =
     ProjectInfoDatum {
+      outref_id: project_info_ref_id,
       owner_pkh: #"f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50",
       project_name: "test",
       deadline: 123_456,
@@ -1384,13 +1580,9 @@ test predictions__spend_reward__ada() {
         reference_script: None,
       },
     }
-  let params =
-    ProjectPredictionParams {
-      project_prediction_nft: project_prediction_nft_asset,
-      project_info_nft: project_info_nft_asset,
-    }
   let pred_datum =
     ProjectPredictionDatum {
+      outref_id: project_info_ref_id,
       total_fee: 0,
       predictions: [Pair("cand_1", 100), Pair("cand_2", 400)],
     }
@@ -1423,6 +1615,7 @@ test predictions__spend_reward__ada() {
   let fee = 10 * project_info_datum.admin_fee_percent * decimals / multiplier
   let pred_out_datum =
     ProjectPredictionDatum {
+      outref_id: project_info_ref_id,
       total_fee: pred_datum.total_fee + fee,
       predictions: [Pair("cand_1", 90), Pair("cand_2", 400)],
     }
@@ -1544,10 +1737,41 @@ test predictions__spend_reward__ada() {
     }
   let mint =
     assets.from_asset(project_info_datum.share_policy_id, "cand_1", -10)
+  let psetting_datum =
+    PSettingDatum {
+      pledge: 100_000_000,
+      pledge_policy_id: #"",
+      pledge_token_name: #"",
+      protocol_treasury_script_hash: #"b4971034feee",
+      share_ratio: 20000,
+      open_fee: 20_000_000,
+      open_fee_policy_id: #"",
+      open_fee_token_name: #"",
+      project_authtoken_policy_id: project_info_nft_policy_id,
+      project_info_token_name: #"",
+      project_prediction_token_name: #"",
+      protocol_stake_key_hash: #"",
+    }
+  let psetting_ref =
+    OutputReference {
+      transaction_id: #"b4971034feee28d07f157faf99b850",
+      output_index: 0,
+    }
+  let psetting_ref_input =
+    Input {
+      output_reference: psetting_ref,
+      output: Output {
+        address: from_script(#"11"),
+        value: assets.zero
+          |> assets.add(protocol_nft_policy_id, psetting_nft_tn, 1),
+        datum: InlineDatum(psetting_datum),
+        reference_script: None,
+      },
+    }
   let tx =
     Transaction {
       inputs: [pred_input, pos_input, license_input],
-      reference_inputs: [project_info_input, oracle_input],
+      reference_inputs: [project_info_input, oracle_input, psetting_ref_input],
       outputs: [pred_out, user_pos_out, license_output],
       fee: 0,
       mint,
@@ -1578,15 +1802,29 @@ test predictions__spend_reward__ada() {
       own_output_idx: 0,
       project_info_idx: 0,
       oracle_ref_input_idx: 1,
+      protocol_setting_ref_idx: 2,
       license_idx: 2,
       pos_indices: [(1, 1)],
     }
-  project_prediction.spend(params, Some(pred_datum), pred_redeemer, own_ref, tx)
+  project_prediction.spend(
+    protocol_nft_policy_id,
+    psetting_nft_tn,
+    Some(pred_datum),
+    pred_redeemer,
+    own_ref,
+    tx,
+  )
 }
 
 test predictions__spend_refund() {
+  let project_info_ref_id =
+    OutputReference {
+      transaction_id: #"d07f157faf99b850b4971034feee28",
+      output_index: 0,
+    }
   let project_info_datum =
     ProjectInfoDatum {
+      outref_id: project_info_ref_id,
       owner_pkh: #"f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50",
       project_name: "test",
       deadline: 123_456,
@@ -1619,13 +1857,9 @@ test predictions__spend_refund() {
         reference_script: None,
       },
     }
-  let params =
-    ProjectPredictionParams {
-      project_prediction_nft: project_prediction_nft_asset,
-      project_info_nft: project_info_nft_asset,
-    }
   let pred_datum =
     ProjectPredictionDatum {
+      outref_id: project_info_ref_id,
       total_fee: 0,
       predictions: [Pair("cand_1", 100), Pair("cand_2", 400)],
     }
@@ -1658,6 +1892,7 @@ test predictions__spend_refund() {
   let fee = 10 * project_info_datum.admin_fee_percent * decimals / multiplier
   let pred_out_datum =
     ProjectPredictionDatum {
+      outref_id: project_info_ref_id,
       total_fee: pred_datum.total_fee + fee,
       predictions: [Pair("cand_1", 90), Pair("cand_2", 400)],
     }
@@ -1758,10 +1993,41 @@ test predictions__spend_refund() {
     }
   let mint =
     assets.from_asset(project_info_datum.share_policy_id, "cand_1", -10)
+  let psetting_datum =
+    PSettingDatum {
+      pledge: 100_000_000,
+      pledge_policy_id: #"",
+      pledge_token_name: #"",
+      protocol_treasury_script_hash: #"b4971034feee",
+      share_ratio: 20000,
+      open_fee: 20_000_000,
+      open_fee_policy_id: #"",
+      open_fee_token_name: #"",
+      project_authtoken_policy_id: project_info_nft_policy_id,
+      project_info_token_name: #"",
+      project_prediction_token_name: #"",
+      protocol_stake_key_hash: #"",
+    }
+  let psetting_ref =
+    OutputReference {
+      transaction_id: #"b4971034feee28d07f157faf99b850",
+      output_index: 0,
+    }
+  let psetting_ref_input =
+    Input {
+      output_reference: psetting_ref,
+      output: Output {
+        address: from_script(#"11"),
+        value: assets.zero
+          |> assets.add(protocol_nft_policy_id, psetting_nft_tn, 1),
+        datum: InlineDatum(psetting_datum),
+        reference_script: None,
+      },
+    }
   let tx =
     Transaction {
       inputs: [pred_input, pos_input, license_input],
-      reference_inputs: [project_info_input],
+      reference_inputs: [project_info_input, psetting_ref_input],
       outputs: [pred_out, user_pos_out, license_output],
       fee: 0,
       mint,
@@ -1791,15 +2057,29 @@ test predictions__spend_refund() {
       own_input_idx: 0,
       own_output_idx: 0,
       project_info_idx: 0,
+      protocol_setting_ref_idx: 1,
       license_idx: 2,
       pos_indices: [(1, 1)],
     }
-  project_prediction.spend(params, Some(pred_datum), pred_redeemer, own_ref, tx)
+  project_prediction.spend(
+    protocol_nft_policy_id,
+    psetting_nft_tn,
+    Some(pred_datum),
+    pred_redeemer,
+    own_ref,
+    tx,
+  )
 }
 
 test predictions__spend_refund__ada() {
+  let project_info_ref_id =
+    OutputReference {
+      transaction_id: #"d07f157faf99b850b4971034feee28",
+      output_index: 0,
+    }
   let project_info_datum =
     ProjectInfoDatum {
+      outref_id: project_info_ref_id,
       owner_pkh: #"f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50",
       project_name: "test",
       deadline: 123_456,
@@ -1832,13 +2112,9 @@ test predictions__spend_refund__ada() {
         reference_script: None,
       },
     }
-  let params =
-    ProjectPredictionParams {
-      project_prediction_nft: project_prediction_nft_asset,
-      project_info_nft: project_info_nft_asset,
-    }
   let pred_datum =
     ProjectPredictionDatum {
+      outref_id: project_info_ref_id,
       total_fee: 0,
       predictions: [Pair("cand_1", 100), Pair("cand_2", 400)],
     }
@@ -1871,6 +2147,7 @@ test predictions__spend_refund__ada() {
   let fee = 10 * project_info_datum.admin_fee_percent * decimals / multiplier
   let pred_out_datum =
     ProjectPredictionDatum {
+      outref_id: project_info_ref_id,
       total_fee: pred_datum.total_fee + fee,
       predictions: [Pair("cand_1", 90), Pair("cand_2", 400)],
     }
@@ -1971,10 +2248,41 @@ test predictions__spend_refund__ada() {
     }
   let mint =
     assets.from_asset(project_info_datum.share_policy_id, "cand_1", -10)
+  let psetting_datum =
+    PSettingDatum {
+      pledge: 100_000_000,
+      pledge_policy_id: #"",
+      pledge_token_name: #"",
+      protocol_treasury_script_hash: #"b4971034feee",
+      share_ratio: 20000,
+      open_fee: 20_000_000,
+      open_fee_policy_id: #"",
+      open_fee_token_name: #"",
+      project_authtoken_policy_id: project_info_nft_policy_id,
+      project_info_token_name: #"",
+      project_prediction_token_name: #"",
+      protocol_stake_key_hash: #"",
+    }
+  let psetting_ref =
+    OutputReference {
+      transaction_id: #"b4971034feee28d07f157faf99b850",
+      output_index: 0,
+    }
+  let psetting_ref_input =
+    Input {
+      output_reference: psetting_ref,
+      output: Output {
+        address: from_script(#"11"),
+        value: assets.zero
+          |> assets.add(protocol_nft_policy_id, psetting_nft_tn, 1),
+        datum: InlineDatum(psetting_datum),
+        reference_script: None,
+      },
+    }
   let tx =
     Transaction {
       inputs: [pred_input, pos_input, license_input],
-      reference_inputs: [project_info_input],
+      reference_inputs: [project_info_input, psetting_ref_input],
       outputs: [pred_out, user_pos_out, license_output],
       fee: 0,
       mint,
@@ -2004,15 +2312,29 @@ test predictions__spend_refund__ada() {
       own_input_idx: 0,
       own_output_idx: 0,
       project_info_idx: 0,
+      protocol_setting_ref_idx: 1,
       license_idx: 2,
       pos_indices: [(1, 1)],
     }
-  project_prediction.spend(params, Some(pred_datum), pred_redeemer, own_ref, tx)
+  project_prediction.spend(
+    protocol_nft_policy_id,
+    psetting_nft_tn,
+    Some(pred_datum),
+    pred_redeemer,
+    own_ref,
+    tx,
+  )
 }
 
 test predictions__spend_withdraw_admin_fee() {
+  let project_info_ref_id =
+    OutputReference {
+      transaction_id: #"d07f157faf99b850b4971034feee28",
+      output_index: 0,
+    }
   let project_info_datum =
     ProjectInfoDatum {
+      outref_id: project_info_ref_id,
       owner_pkh: #"f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50",
       project_name: "test",
       deadline: 123_456,
@@ -2045,13 +2367,9 @@ test predictions__spend_withdraw_admin_fee() {
         reference_script: None,
       },
     }
-  let params =
-    ProjectPredictionParams {
-      project_prediction_nft: project_prediction_nft_asset,
-      project_info_nft: project_info_nft_asset,
-    }
   let pred_datum =
     ProjectPredictionDatum {
+      outref_id: project_info_ref_id,
       total_fee: 25 * decimals,
       predictions: [Pair("cand_1", 100), Pair("cand_2", 400)],
     }
@@ -2082,6 +2400,7 @@ test predictions__spend_withdraw_admin_fee() {
     }
   let pred_out_datum =
     ProjectPredictionDatum {
+      outref_id: project_info_ref_id,
       total_fee: 0,
       predictions: [Pair("cand_1", 100), Pair("cand_2", 400)],
     }
@@ -2144,10 +2463,41 @@ test predictions__spend_withdraw_admin_fee() {
       datum: NoDatum,
       reference_script: None,
     }
+  let psetting_datum =
+    PSettingDatum {
+      pledge: 100_000_000,
+      pledge_policy_id: #"",
+      pledge_token_name: #"",
+      protocol_treasury_script_hash: #"b4971034feee",
+      share_ratio: 20000,
+      open_fee: 20_000_000,
+      open_fee_policy_id: #"",
+      open_fee_token_name: #"",
+      project_authtoken_policy_id: project_info_nft_policy_id,
+      project_info_token_name: #"",
+      project_prediction_token_name: #"",
+      protocol_stake_key_hash: #"",
+    }
+  let psetting_ref =
+    OutputReference {
+      transaction_id: #"b4971034feee28d07f157faf99b850",
+      output_index: 0,
+    }
+  let psetting_ref_input =
+    Input {
+      output_reference: psetting_ref,
+      output: Output {
+        address: from_script(#"11"),
+        value: assets.zero
+          |> assets.add(protocol_nft_policy_id, psetting_nft_tn, 1),
+        datum: InlineDatum(psetting_datum),
+        reference_script: None,
+      },
+    }
   let tx =
     Transaction {
       inputs: [pred_input, license_input],
-      reference_inputs: [project_info_input],
+      reference_inputs: [project_info_input, psetting_ref_input],
       outputs: [pred_out, treasury_out, license_output],
       fee: 0,
       mint: assets.zero,
@@ -2177,15 +2527,29 @@ test predictions__spend_withdraw_admin_fee() {
       own_input_idx: 0,
       own_output_idx: 0,
       project_info_idx: 0,
+      protocol_setting_ref_idx: 1,
       license_idx: 1,
       treasury_out_idx: 1,
     }
-  project_prediction.spend(params, Some(pred_datum), pred_redeemer, own_ref, tx)
+  project_prediction.spend(
+    protocol_nft_policy_id,
+    psetting_nft_tn,
+    Some(pred_datum),
+    pred_redeemer,
+    own_ref,
+    tx,
+  )
 }
 
 test predictions__spend_withdraw_admin_fee__ada() {
+  let project_info_ref_id =
+    OutputReference {
+      transaction_id: #"d07f157faf99b850b4971034feee28",
+      output_index: 0,
+    }
   let project_info_datum =
     ProjectInfoDatum {
+      outref_id: project_info_ref_id,
       owner_pkh: #"f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50",
       project_name: "test",
       deadline: 123_456,
@@ -2218,13 +2582,9 @@ test predictions__spend_withdraw_admin_fee__ada() {
         reference_script: None,
       },
     }
-  let params =
-    ProjectPredictionParams {
-      project_prediction_nft: project_prediction_nft_asset,
-      project_info_nft: project_info_nft_asset,
-    }
   let pred_datum =
     ProjectPredictionDatum {
+      outref_id: project_info_ref_id,
       total_fee: 25 * decimals,
       predictions: [Pair("cand_1", 100), Pair("cand_2", 400)],
     }
@@ -2255,6 +2615,7 @@ test predictions__spend_withdraw_admin_fee__ada() {
     }
   let pred_out_datum =
     ProjectPredictionDatum {
+      outref_id: project_info_ref_id,
       total_fee: 0,
       predictions: [Pair("cand_1", 100), Pair("cand_2", 400)],
     }
@@ -2317,10 +2678,41 @@ test predictions__spend_withdraw_admin_fee__ada() {
       datum: NoDatum,
       reference_script: None,
     }
+  let psetting_datum =
+    PSettingDatum {
+      pledge: 100_000_000,
+      pledge_policy_id: #"",
+      pledge_token_name: #"",
+      protocol_treasury_script_hash: #"b4971034feee",
+      share_ratio: 20000,
+      open_fee: 20_000_000,
+      open_fee_policy_id: #"",
+      open_fee_token_name: #"",
+      project_authtoken_policy_id: project_info_nft_policy_id,
+      project_info_token_name: #"",
+      project_prediction_token_name: #"",
+      protocol_stake_key_hash: #"",
+    }
+  let psetting_ref =
+    OutputReference {
+      transaction_id: #"b4971034feee28d07f157faf99b850",
+      output_index: 0,
+    }
+  let psetting_ref_input =
+    Input {
+      output_reference: psetting_ref,
+      output: Output {
+        address: from_script(#"11"),
+        value: assets.zero
+          |> assets.add(protocol_nft_policy_id, psetting_nft_tn, 1),
+        datum: InlineDatum(psetting_datum),
+        reference_script: None,
+      },
+    }
   let tx =
     Transaction {
       inputs: [pred_input, license_input],
-      reference_inputs: [project_info_input],
+      reference_inputs: [project_info_input, psetting_ref_input],
       outputs: [pred_out, treasury_out, license_output],
       fee: 0,
       mint: assets.zero,
@@ -2350,8 +2742,16 @@ test predictions__spend_withdraw_admin_fee__ada() {
       own_input_idx: 0,
       own_output_idx: 0,
       project_info_idx: 0,
+      protocol_setting_ref_idx: 1,
       license_idx: 1,
       treasury_out_idx: 1,
     }
-  project_prediction.spend(params, Some(pred_datum), pred_redeemer, own_ref, tx)
+  project_prediction.spend(
+    protocol_nft_policy_id,
+    psetting_nft_tn,
+    Some(pred_datum),
+    pred_redeemer,
+    own_ref,
+    tx,
+  )
 }

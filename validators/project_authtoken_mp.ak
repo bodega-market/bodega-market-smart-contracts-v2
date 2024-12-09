@@ -44,7 +44,6 @@ validator project_authtoken_mp(
   seed: OutputReference,
   project_info_script_hash: ByteArray,
   project_prediction_script_hash: ByteArray,
-  protocol_stake_key_hash: ByteArray,
   psettings_nft_policy_id: ByteArray,
   psettings_nft_tn: ByteArray,
 ) {
@@ -76,7 +75,8 @@ validator project_authtoken_mp(
       list.at(outputs, redeemer.project_prediction_out_idx)
     let project_info_cred = Script(project_info_script_hash)
     let project_prediction_cred = Script(project_prediction_script_hash)
-    let protocol_stake_cred = Inline(Script(protocol_stake_key_hash))
+    let protocol_stake_cred =
+      Inline(Script(protocol_setting_datum.protocol_stake_key_hash))
     expect
       credential.compare(
         project_info_cred,
@@ -174,6 +174,10 @@ test project_authtoken_mp_success() {
       open_fee: 20_000_000,
       open_fee_policy_id: #"",
       open_fee_token_name: #"",
+      project_authtoken_policy_id: #"",
+      project_info_token_name: #"",
+      project_prediction_token_name: #"",
+      protocol_stake_key_hash: #"",
     }
   let psetting_ref =
     OutputReference {
@@ -191,8 +195,14 @@ test project_authtoken_mp_success() {
         reference_script: None,
       },
     }
+  let project_info_ref_id =
+    OutputReference {
+      transaction_id: #"b4971034feee28d07f157faf99b850",
+      output_index: 0,
+    }
   let project_info_datum =
     ProjectInfoDatum {
+      outref_id: project_info_ref_id,
       owner_pkh: #"f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50",
       project_name: "test",
       deadline: 123_456,
@@ -220,6 +230,7 @@ test project_authtoken_mp_success() {
     }
   let pred_datum =
     ProjectPredictionDatum {
+      outref_id: project_info_ref_id,
       total_fee: 0,
       predictions: [Pair("cand_1", 0), Pair("cand_2", 0)],
     }
@@ -261,7 +272,6 @@ test project_authtoken_mp_success() {
     own_ref,
     project_info_script_hash,
     project_prediction_script_hash,
-    protocol_stake_key_hash,
     psettings_nft_policy_id,
     psettings_nft_tn,
     redeemer,

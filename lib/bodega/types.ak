@@ -1,5 +1,6 @@
 use aiken/crypto.{Blake2b_224, Hash, VerificationKey}
 use cardano/assets.{AssetName, PolicyId}
+use cardano/transaction.{OutputReference}
 
 pub type PubKeyHash =
   Hash<Blake2b_224, VerificationKey>
@@ -10,6 +11,7 @@ pub type Asset {
 }
 
 pub type ProjectInfoDatum {
+  outref_id: OutputReference,
   owner_pkh: ByteArray,
   project_name: ByteArray,
   deadline: Int,
@@ -28,6 +30,7 @@ pub type ProjectInfoDatum {
 }
 
 pub type ProjectPredictionDatum {
+  outref_id: OutputReference,
   total_fee: Int,
   predictions: List<Pair<ByteArray, Int>>,
 }
@@ -42,6 +45,10 @@ pub type PSettingDatum {
   open_fee: Int,
   open_fee_policy_id: ByteArray,
   open_fee_token_name: ByteArray,
+  project_authtoken_policy_id: ByteArray,
+  project_info_token_name: ByteArray,
+  project_prediction_token_name: ByteArray,
+  protocol_stake_key_hash: ByteArray,
 }
 
 pub type PositionType {
@@ -57,11 +64,6 @@ pub type PositionDatum {
   pos_amount: Int,
   pos_batcher_fee: Int,
   pos_candidate: ByteArray,
-}
-
-pub type ProjectPredictionParams {
-  project_prediction_nft: Asset,
-  project_info_nft: Asset,
 }
 
 pub type OracleDatum {

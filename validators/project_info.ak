@@ -2,9 +2,7 @@ use aiken/collection/dict
 use aiken/collection/list
 use aiken/interval
 use bodega/constants.{project_info_nft_tn}
-use bodega/test_constants.{
-  pmanager_nft_asset, project_info_nft_asset, project_info_nft_policy_id,
-}
+use bodega/test_constants.{pmanager_nft_asset, project_info_nft_policy_id}
 use bodega/types.{Asset, ProjectInfoDatum}
 use cardano/address.{from_script}
 use cardano/assets
@@ -17,7 +15,7 @@ pub type PMSpendRedeemer {
   Slash { protocol_manager_in_idx: Int }
 }
 
-validator project_info(protocol_manager_nft: Asset, _project_info_nft: Asset) {
+validator project_info(protocol_manager_nft: Asset) {
   spend(
     datum: Option<ProjectInfoDatum>,
     redeemer: PMSpendRedeemer,
@@ -45,6 +43,7 @@ validator project_info(protocol_manager_nft: Asset, _project_info_nft: Asset) {
             own_datum.admin_fee_percent == own_output_datum.admin_fee_percent,
             own_datum.envelope_amount == own_output_datum.envelope_amount,
             own_datum.candidates == own_output_datum.candidates,
+            own_datum.outref_id == own_output_datum.outref_id,
             list.has(extra_signatories, own_datum.owner_pkh),
           }
         True
@@ -69,8 +68,14 @@ validator project_info(protocol_manager_nft: Asset, _project_info_nft: Asset) {
 }
 
 test project_info__spend_success() {
+  let project_info_ref_id =
+    OutputReference {
+      transaction_id: #"2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c",
+      output_index: 0,
+    }
   let project_info_datum =
     ProjectInfoDatum {
+      outref_id: project_info_ref_id,
       owner_pkh: #"f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50",
       project_name: "test",
       deadline: 123_456,
@@ -104,8 +109,14 @@ test project_info__spend_success() {
       },
     }
   let project_info_redeemer = Update { own_in_idx: 0, own_out_idx: 0 }
+  let project_info_ref_id =
+    OutputReference {
+      transaction_id: #"2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c",
+      output_index: 0,
+    }
   let project_info_out_datum =
     ProjectInfoDatum {
+      outref_id: project_info_ref_id,
       owner_pkh: #"f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50",
       project_name: "test",
       deadline: 123_456,
@@ -153,7 +164,6 @@ test project_info__spend_success() {
     }
   project_info.spend(
     pmanager_nft_asset,
-    project_info_nft_asset,
     Some(project_info_out_datum),
     project_info_redeemer,
     project_info_ref,
@@ -162,8 +172,14 @@ test project_info__spend_success() {
 }
 
 test project_info__spend_fail() fail {
+  let project_info_ref_id =
+    OutputReference {
+      transaction_id: #"2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c",
+      output_index: 0,
+    }
   let project_info_datum =
     ProjectInfoDatum {
+      outref_id: project_info_ref_id,
       owner_pkh: #"f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50",
       project_name: "test",
       deadline: 123_456,
@@ -197,8 +213,14 @@ test project_info__spend_fail() fail {
       },
     }
   let project_info_redeemer = Update { own_in_idx: 0, own_out_idx: 0 }
+  let project_info_ref_id =
+    OutputReference {
+      transaction_id: #"2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c",
+      output_index: 0,
+    }
   let project_info_out_datum =
     ProjectInfoDatum {
+      outref_id: project_info_ref_id,
       owner_pkh: #"f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50",
       project_name: "test",
       deadline: 123_456,
@@ -246,7 +268,6 @@ test project_info__spend_fail() fail {
     }
   project_info.spend(
     pmanager_nft_asset,
-    project_info_nft_asset,
     Some(project_info_datum),
     project_info_redeemer,
     project_info_ref,
@@ -255,8 +276,14 @@ test project_info__spend_fail() fail {
 }
 
 test project_info__spend__slash() {
+  let project_info_ref_id =
+    OutputReference {
+      transaction_id: #"2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c",
+      output_index: 0,
+    }
   let project_info_datum =
     ProjectInfoDatum {
+      outref_id: project_info_ref_id,
       owner_pkh: #"f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50",
       project_name: "test",
       deadline: 123_456,
@@ -333,7 +360,6 @@ test project_info__spend__slash() {
     }
   project_info.spend(
     pmanager_nft_asset,
-    project_info_nft_asset,
     Some(project_info_datum),
     project_info_redeemer,
     project_info_ref,

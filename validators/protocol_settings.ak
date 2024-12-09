@@ -46,6 +46,10 @@ test protocol_settings__spend() {
       open_fee: 20_000_000,
       open_fee_policy_id: #"",
       open_fee_token_name: #"",
+      project_authtoken_policy_id: #"",
+      project_info_token_name: #"",
+      project_prediction_token_name: #"",
+      protocol_stake_key_hash: #"",
     }
   let psetting_ref =
     OutputReference {
