@@ -6,8 +6,8 @@ use bodega/constants.{
   project_info_nft_tn, project_prediction_nft_tn, psetting_nft_tn,
 }
 use bodega/test_constants.{
-  license_symbol, project_info_nft_policy_id, project_prediction_nft_policy_id,
-  protocol_nft_policy_id, share_policy_id,
+  license_symbol, project_info_nft_policy_id, protocol_nft_policy_id,
+  share_policy_id,
 }
 use bodega/types.{
   BuyPos, OracleDatum, PSettingDatum, PositionDatum, ProjectInfoDatum,
@@ -148,6 +148,7 @@ validator project_prediction(
               expect Some(out) = list.at(outputs, out_idx)
               expect InlineDatum(pos_inline_datum) = in.output.datum
               expect pos_datum: PositionDatum = pos_inline_datum
+              expect pos_datum.outref_id == project_info_datum.outref_id
               expect pos_datum.pos_type == BuyPos
               let user_address =
                 address.from_verification_key(pos_datum.pos_user_pkh)
@@ -221,8 +222,8 @@ validator project_prediction(
         list.foldr(
           in_out_zip,
           True,
-          fn(in_out: (Pair<ByteArray, Int>, Pair<ByteArray, Int>), acc) {
-            let (Pair(in_cand, in_amount), Pair(out_cand, out_amount)) = in_out
+          fn(in_out: ((ByteArray, Int), (ByteArray, Int)), acc) {
+            let ((in_cand, in_amount), (out_cand, out_amount)) = in_out
             expect in_cand == out_cand
             let apply_amount =
               assets.quantity_of(
@@ -317,7 +318,7 @@ validator project_prediction(
           list.foldr(
             own_input_datum.predictions,
             (0, 0),
-            fn(Pair(cand, amount), acc) {
+            fn((cand, amount), acc) {
               let (cur_total_shares, cur_win_shares) = acc
               (
                 cur_total_shares + amount,
@@ -340,6 +341,7 @@ validator project_prediction(
               expect Some(out) = list.at(outputs, out_idx)
               expect InlineDatum(pos_inline_datum) = in.output.datum
               expect pos_datum: PositionDatum = pos_inline_datum
+              expect pos_datum.outref_id == project_info_datum.outref_id
               expect pos_datum.pos_type == RewardPos
               let user_address =
                 address.from_verification_key(pos_datum.pos_user_pkh)
@@ -438,8 +440,8 @@ validator project_prediction(
         list.foldr(
           in_out_zip,
           True,
-          fn(in_out: (Pair<ByteArray, Int>, Pair<ByteArray, Int>), acc) {
-            let (Pair(in_cand, in_amount), Pair(out_cand, out_amount)) = in_out
+          fn(in_out: ((ByteArray, Int), (ByteArray, Int)), acc) {
+            let ((in_cand, in_amount), (out_cand, out_amount)) = in_out
             expect in_cand == out_cand
             if in_cand == oracle_datum.candidate {
               in_amount == out_amount + total_in_shares && acc
@@ -533,6 +535,7 @@ validator project_prediction(
               expect Some(out) = list.at(outputs, out_idx)
               expect InlineDatum(pos_inline_datum) = in.output.datum
               expect pos_datum: PositionDatum = pos_inline_datum
+              expect pos_datum.outref_id == project_info_datum.outref_id
               let user_address =
                 address.from_verification_key(pos_datum.pos_user_pkh)
                   |> address.with_delegation_key(pos_datum.pos_user_stake_key)
@@ -622,11 +625,11 @@ validator project_prediction(
                 when
                   list.find(
                     own_input_datum.predictions,
-                    fn(Pair(candidate, _amt)) { cand == candidate },
+                    fn((candidate, _amt)) { cand == candidate },
                   )
                 is {
                   Some(x) -> {
-                    let Pair(_cand, amt) = x
+                    let (_cand, amt) = x
                     amt
                   }
                   None -> fail @"invalid position"
@@ -635,11 +638,11 @@ validator project_prediction(
                 when
                   list.find(
                     own_output_datum.predictions,
-                    fn(Pair(candidate, _amt)) { cand == candidate },
+                    fn((candidate, _amt)) { cand == candidate },
                   )
                 is {
                   Some(x) -> {
-                    let Pair(_cand, amt) = x
+                    let (_cand, amt) = x
                     amt
                   }
                   None -> fail @"invalid position"
@@ -735,7 +738,7 @@ validator project_prediction(
           ..
         }) = list.at(outputs, treasury_out_idx)
         expect
-          from_script(project_info_datum.treasury_script_hash) == treasury_address
+          from_script(protocol_setting_datum.protocol_treasury_script_hash) == treasury_address
         let flatten_own_output_value = assets.flatten(own_output.value)
         expect list.length(flatten_own_output_value) <= 3
         let input_payment =
@@ -775,6 +778,43 @@ validator project_prediction(
 }
 
 test predictions__spend_apply() {
+  let project_info_script_hash =
+    #"8db00d760acf62c0ebaa5ff2c36e9eeb9655d06c0a2f02d9e200aa6f"
+  let project_prediction_script_hash =
+    #"9655d06c0a2f02d9e200aa6f8db00d760acf62c0ebaa5ff2c36e9eeb"
+  let protocol_stake_key_hash =
+    #"eb9655d06c0a2f02d9e200aa6f8db00d760acf62c0ebaa5ff2c36e9e"
+  let psetting_datum =
+    PSettingDatum {
+      pledge: 100_000_000,
+      pledge_policy_id: #"",
+      pledge_token_name: #"",
+      protocol_treasury_script_hash: #"b4971034feee",
+      share_ratio: 20000,
+      open_fee: 20_000_000,
+      open_fee_policy_id: #"",
+      open_fee_token_name: #"",
+      project_authtoken_policy_id: project_info_nft_policy_id,
+      project_info_token_name: project_info_nft_tn,
+      project_prediction_token_name: project_prediction_nft_tn,
+      protocol_stake_key_hash,
+    }
+  let psetting_ref =
+    OutputReference {
+      transaction_id: #"b4971034feee28d07f157faf99b850",
+      output_index: 0,
+    }
+  let psetting_ref_input =
+    Input {
+      output_reference: psetting_ref,
+      output: Output {
+        address: from_script(#"11"),
+        value: assets.zero
+          |> assets.add(protocol_nft_policy_id, psetting_nft_tn, 1),
+        datum: InlineDatum(psetting_datum),
+        reference_script: None,
+      },
+    }
   let project_info_ref_id =
     OutputReference {
       transaction_id: #"d07f157faf99b850b4971034feee28",
@@ -789,7 +829,6 @@ test predictions__spend_apply() {
       payment_policy_id: #"3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe",
       payment_token_name: "token_name",
       batcher_policy_id: #"6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e",
-      treasury_script_hash: #"f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2",
       position_script_hash: #"702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86",
       share_policy_id: #"2d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c425",
       oracle_policy_id: #"f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9",
@@ -808,9 +847,14 @@ test predictions__spend_apply() {
     Input {
       output_reference: project_info_ref,
       output: Output {
-        address: from_script(#"11"),
+        address: from_script(project_info_script_hash)
+          |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
         value: assets.zero
-          |> assets.add(project_info_nft_policy_id, project_info_nft_tn, 1),
+          |> assets.add(
+              psetting_datum.project_authtoken_policy_id,
+              psetting_datum.project_info_token_name,
+              1,
+            ),
         datum: InlineDatum(project_info_datum),
         reference_script: None,
       },
@@ -819,7 +863,7 @@ test predictions__spend_apply() {
     ProjectPredictionDatum {
       outref_id: project_info_ref_id,
       total_fee: 0,
-      predictions: [Pair("cand_1", 0), Pair("cand_2", 0)],
+      predictions: [("cand_1", 0), ("cand_2", 0)],
     }
   let own_ref =
     OutputReference {
@@ -830,11 +874,12 @@ test predictions__spend_apply() {
     Input {
       output_reference: own_ref,
       output: Output {
-        address: from_script(#""),
+        address: from_script(project_prediction_script_hash)
+          |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
         value: assets.from_lovelace(2_000_000)
           |> assets.add(
-              project_prediction_nft_policy_id,
-              project_prediction_nft_tn,
+              psetting_datum.project_authtoken_policy_id,
+              psetting_datum.project_prediction_token_name,
               1,
             ),
         datum: InlineDatum(pred_datum),
@@ -847,15 +892,16 @@ test predictions__spend_apply() {
     ProjectPredictionDatum {
       outref_id: project_info_ref_id,
       total_fee: pred_datum.total_fee + fee,
-      predictions: [Pair("cand_1", 10), Pair("cand_2", 0)],
+      predictions: [("cand_1", 10), ("cand_2", 0)],
     }
   let pred_out =
     Output {
-      address: from_script(#""),
+      address: from_script(project_prediction_script_hash)
+        |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
       value: assets.from_lovelace(2_000_000)
         |> assets.add(
-            project_prediction_nft_policy_id,
-            project_prediction_nft_tn,
+            psetting_datum.project_authtoken_policy_id,
+            psetting_datum.project_prediction_token_name,
             1,
           )
         |> assets.add(
@@ -873,6 +919,7 @@ test predictions__spend_apply() {
     }
   let pos_datum =
     PositionDatum {
+      outref_id: project_info_ref_id,
       pos_user_pkh: #"6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b",
       pos_user_stake_key: #"c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3",
       pos_type: BuyPos,
@@ -939,37 +986,6 @@ test predictions__spend_apply() {
       ),
       datum: NoDatum,
       reference_script: None,
-    }
-  let psetting_datum =
-    PSettingDatum {
-      pledge: 100_000_000,
-      pledge_policy_id: #"",
-      pledge_token_name: #"",
-      protocol_treasury_script_hash: #"b4971034feee",
-      share_ratio: 20000,
-      open_fee: 20_000_000,
-      open_fee_policy_id: #"",
-      open_fee_token_name: #"",
-      project_authtoken_policy_id: project_info_nft_policy_id,
-      project_info_token_name: #"",
-      project_prediction_token_name: #"",
-      protocol_stake_key_hash: #"",
-    }
-  let psetting_ref =
-    OutputReference {
-      transaction_id: #"b4971034feee28d07f157faf99b850",
-      output_index: 0,
-    }
-  let psetting_ref_input =
-    Input {
-      output_reference: psetting_ref,
-      output: Output {
-        address: from_script(#"11"),
-        value: assets.zero
-          |> assets.add(protocol_nft_policy_id, psetting_nft_tn, 1),
-        datum: InlineDatum(psetting_datum),
-        reference_script: None,
-      },
     }
   let tx =
     Transaction {
@@ -1019,6 +1035,43 @@ test predictions__spend_apply() {
 }
 
 test predictions__spend_apply__ada() {
+  let project_info_script_hash =
+    #"8db00d760acf62c0ebaa5ff2c36e9eeb9655d06c0a2f02d9e200aa6f"
+  let project_prediction_script_hash =
+    #"9655d06c0a2f02d9e200aa6f8db00d760acf62c0ebaa5ff2c36e9eeb"
+  let protocol_stake_key_hash =
+    #"eb9655d06c0a2f02d9e200aa6f8db00d760acf62c0ebaa5ff2c36e9e"
+  let psetting_datum =
+    PSettingDatum {
+      pledge: 100_000_000,
+      pledge_policy_id: #"",
+      pledge_token_name: #"",
+      protocol_treasury_script_hash: #"b4971034feee",
+      share_ratio: 20000,
+      open_fee: 20_000_000,
+      open_fee_policy_id: #"",
+      open_fee_token_name: #"",
+      project_authtoken_policy_id: project_info_nft_policy_id,
+      project_info_token_name: project_info_nft_tn,
+      project_prediction_token_name: project_prediction_nft_tn,
+      protocol_stake_key_hash,
+    }
+  let psetting_ref =
+    OutputReference {
+      transaction_id: #"b4971034feee28d07f157faf99b850",
+      output_index: 0,
+    }
+  let psetting_ref_input =
+    Input {
+      output_reference: psetting_ref,
+      output: Output {
+        address: from_script(#"11"),
+        value: assets.zero
+          |> assets.add(protocol_nft_policy_id, psetting_nft_tn, 1),
+        datum: InlineDatum(psetting_datum),
+        reference_script: None,
+      },
+    }
   let project_info_ref_id =
     OutputReference {
       transaction_id: #"d07f157faf99b850b4971034feee28",
@@ -1033,7 +1086,6 @@ test predictions__spend_apply__ada() {
       payment_policy_id: #"",
       payment_token_name: "",
       batcher_policy_id: #"6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e",
-      treasury_script_hash: #"f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2",
       position_script_hash: #"702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86",
       share_policy_id: #"2d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c425",
       oracle_policy_id: #"f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9",
@@ -1052,9 +1104,14 @@ test predictions__spend_apply__ada() {
     Input {
       output_reference: project_info_ref,
       output: Output {
-        address: from_script(#"11"),
+        address: from_script(project_info_script_hash)
+          |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
         value: assets.zero
-          |> assets.add(project_info_nft_policy_id, project_info_nft_tn, 1),
+          |> assets.add(
+              psetting_datum.project_authtoken_policy_id,
+              psetting_datum.project_info_token_name,
+              1,
+            ),
         datum: InlineDatum(project_info_datum),
         reference_script: None,
       },
@@ -1063,7 +1120,7 @@ test predictions__spend_apply__ada() {
     ProjectPredictionDatum {
       outref_id: project_info_ref_id,
       total_fee: 0,
-      predictions: [Pair("cand_1", 0), Pair("cand_2", 0)],
+      predictions: [("cand_1", 0), ("cand_2", 0)],
     }
   let own_ref =
     OutputReference {
@@ -1074,11 +1131,12 @@ test predictions__spend_apply__ada() {
     Input {
       output_reference: own_ref,
       output: Output {
-        address: from_script(#""),
+        address: from_script(project_prediction_script_hash)
+          |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
         value: assets.from_lovelace(2_000_000)
           |> assets.add(
-              project_prediction_nft_policy_id,
-              project_prediction_nft_tn,
+              psetting_datum.project_authtoken_policy_id,
+              psetting_datum.project_prediction_token_name,
               1,
             ),
         datum: InlineDatum(pred_datum),
@@ -1091,15 +1149,16 @@ test predictions__spend_apply__ada() {
     ProjectPredictionDatum {
       outref_id: project_info_ref_id,
       total_fee: pred_datum.total_fee + fee,
-      predictions: [Pair("cand_1", 10), Pair("cand_2", 0)],
+      predictions: [("cand_1", 10), ("cand_2", 0)],
     }
   let pred_out =
     Output {
-      address: from_script(#""),
+      address: from_script(project_prediction_script_hash)
+        |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
       value: assets.from_lovelace(2_000_000)
         |> assets.add(
-            project_prediction_nft_policy_id,
-            project_prediction_nft_tn,
+            psetting_datum.project_authtoken_policy_id,
+            psetting_datum.project_prediction_token_name,
             1,
           )
         |> assets.add(
@@ -1117,6 +1176,7 @@ test predictions__spend_apply__ada() {
     }
   let pos_datum =
     PositionDatum {
+      outref_id: project_info_ref_id,
       pos_user_pkh: #"6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b",
       pos_user_stake_key: #"c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3",
       pos_type: BuyPos,
@@ -1184,37 +1244,6 @@ test predictions__spend_apply__ada() {
       datum: NoDatum,
       reference_script: None,
     }
-  let psetting_datum =
-    PSettingDatum {
-      pledge: 100_000_000,
-      pledge_policy_id: #"",
-      pledge_token_name: #"",
-      protocol_treasury_script_hash: #"b4971034feee",
-      share_ratio: 20000,
-      open_fee: 20_000_000,
-      open_fee_policy_id: #"",
-      open_fee_token_name: #"",
-      project_authtoken_policy_id: project_info_nft_policy_id,
-      project_info_token_name: #"",
-      project_prediction_token_name: #"",
-      protocol_stake_key_hash: #"",
-    }
-  let psetting_ref =
-    OutputReference {
-      transaction_id: #"b4971034feee28d07f157faf99b850",
-      output_index: 0,
-    }
-  let psetting_ref_input =
-    Input {
-      output_reference: psetting_ref,
-      output: Output {
-        address: from_script(#"11"),
-        value: assets.zero
-          |> assets.add(protocol_nft_policy_id, psetting_nft_tn, 1),
-        datum: InlineDatum(psetting_datum),
-        reference_script: None,
-      },
-    }
   let tx =
     Transaction {
       inputs: [pred_input, pos_input, license_input],
@@ -1263,6 +1292,43 @@ test predictions__spend_apply__ada() {
 }
 
 test predictions__spend_reward() {
+  let project_info_script_hash =
+    #"8db00d760acf62c0ebaa5ff2c36e9eeb9655d06c0a2f02d9e200aa6f"
+  let project_prediction_script_hash =
+    #"9655d06c0a2f02d9e200aa6f8db00d760acf62c0ebaa5ff2c36e9eeb"
+  let protocol_stake_key_hash =
+    #"eb9655d06c0a2f02d9e200aa6f8db00d760acf62c0ebaa5ff2c36e9e"
+  let psetting_datum =
+    PSettingDatum {
+      pledge: 100_000_000,
+      pledge_policy_id: #"",
+      pledge_token_name: #"",
+      protocol_treasury_script_hash: #"b4971034feee",
+      share_ratio: 20000,
+      open_fee: 20_000_000,
+      open_fee_policy_id: #"",
+      open_fee_token_name: #"",
+      project_authtoken_policy_id: project_info_nft_policy_id,
+      project_info_token_name: project_info_nft_tn,
+      project_prediction_token_name: project_prediction_nft_tn,
+      protocol_stake_key_hash,
+    }
+  let psetting_ref =
+    OutputReference {
+      transaction_id: #"b4971034feee28d07f157faf99b850",
+      output_index: 0,
+    }
+  let psetting_ref_input =
+    Input {
+      output_reference: psetting_ref,
+      output: Output {
+        address: from_script(#"11"),
+        value: assets.zero
+          |> assets.add(protocol_nft_policy_id, psetting_nft_tn, 1),
+        datum: InlineDatum(psetting_datum),
+        reference_script: None,
+      },
+    }
   let project_info_ref_id =
     OutputReference {
       transaction_id: #"d07f157faf99b850b4971034feee28",
@@ -1277,7 +1343,6 @@ test predictions__spend_reward() {
       payment_policy_id: #"3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe",
       payment_token_name: "token_name",
       batcher_policy_id: #"6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e",
-      treasury_script_hash: #"f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2",
       position_script_hash: #"702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86",
       share_policy_id: #"2d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c425",
       oracle_policy_id: #"f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9",
@@ -1296,9 +1361,14 @@ test predictions__spend_reward() {
     Input {
       output_reference: project_info_ref,
       output: Output {
-        address: from_script(#"11"),
+        address: from_script(project_info_script_hash)
+          |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
         value: assets.zero
-          |> assets.add(project_info_nft_policy_id, project_info_nft_tn, 1),
+          |> assets.add(
+              psetting_datum.project_authtoken_policy_id,
+              psetting_datum.project_info_token_name,
+              1,
+            ),
         datum: InlineDatum(project_info_datum),
         reference_script: None,
       },
@@ -1307,7 +1377,7 @@ test predictions__spend_reward() {
     ProjectPredictionDatum {
       outref_id: project_info_ref_id,
       total_fee: 0,
-      predictions: [Pair("cand_1", 100), Pair("cand_2", 400)],
+      predictions: [("cand_1", 100), ("cand_2", 400)],
     }
   let own_ref =
     OutputReference {
@@ -1318,11 +1388,12 @@ test predictions__spend_reward() {
     Input {
       output_reference: own_ref,
       output: Output {
-        address: from_script(#""),
+        address: from_script(project_prediction_script_hash)
+          |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
         value: assets.from_lovelace(2_000_000)
           |> assets.add(
-              project_prediction_nft_policy_id,
-              project_prediction_nft_tn,
+              psetting_datum.project_authtoken_policy_id,
+              psetting_datum.project_prediction_token_name,
               1,
             )
           |> assets.add(
@@ -1340,15 +1411,16 @@ test predictions__spend_reward() {
     ProjectPredictionDatum {
       outref_id: project_info_ref_id,
       total_fee: pred_datum.total_fee + fee,
-      predictions: [Pair("cand_1", 90), Pair("cand_2", 400)],
+      predictions: [("cand_1", 90), ("cand_2", 400)],
     }
   let pred_out =
     Output {
-      address: from_script(#""),
+      address: from_script(project_prediction_script_hash)
+        |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
       value: assets.from_lovelace(2_000_000)
         |> assets.add(
-            project_prediction_nft_policy_id,
-            project_prediction_nft_tn,
+            psetting_datum.project_authtoken_policy_id,
+            psetting_datum.project_prediction_token_name,
             1,
           )
         |> assets.add(
@@ -1366,6 +1438,7 @@ test predictions__spend_reward() {
     }
   let pos_datum =
     PositionDatum {
+      outref_id: project_info_ref_id,
       pos_user_pkh: #"6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b",
       pos_user_stake_key: #"c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3",
       pos_type: RewardPos,
@@ -1460,37 +1533,6 @@ test predictions__spend_reward() {
     }
   let mint =
     assets.from_asset(project_info_datum.share_policy_id, "cand_1", -10)
-  let psetting_datum =
-    PSettingDatum {
-      pledge: 100_000_000,
-      pledge_policy_id: #"",
-      pledge_token_name: #"",
-      protocol_treasury_script_hash: #"b4971034feee",
-      share_ratio: 20000,
-      open_fee: 20_000_000,
-      open_fee_policy_id: #"",
-      open_fee_token_name: #"",
-      project_authtoken_policy_id: project_info_nft_policy_id,
-      project_info_token_name: #"",
-      project_prediction_token_name: #"",
-      protocol_stake_key_hash: #"",
-    }
-  let psetting_ref =
-    OutputReference {
-      transaction_id: #"b4971034feee28d07f157faf99b850",
-      output_index: 0,
-    }
-  let psetting_ref_input =
-    Input {
-      output_reference: psetting_ref,
-      output: Output {
-        address: from_script(#"11"),
-        value: assets.zero
-          |> assets.add(protocol_nft_policy_id, psetting_nft_tn, 1),
-        datum: InlineDatum(psetting_datum),
-        reference_script: None,
-      },
-    }
   let tx =
     Transaction {
       inputs: [pred_input, pos_input, license_input],
@@ -1540,6 +1582,43 @@ test predictions__spend_reward() {
 }
 
 test predictions__spend_reward__ada() {
+  let project_info_script_hash =
+    #"8db00d760acf62c0ebaa5ff2c36e9eeb9655d06c0a2f02d9e200aa6f"
+  let project_prediction_script_hash =
+    #"9655d06c0a2f02d9e200aa6f8db00d760acf62c0ebaa5ff2c36e9eeb"
+  let protocol_stake_key_hash =
+    #"eb9655d06c0a2f02d9e200aa6f8db00d760acf62c0ebaa5ff2c36e9e"
+  let psetting_datum =
+    PSettingDatum {
+      pledge: 100_000_000,
+      pledge_policy_id: #"",
+      pledge_token_name: #"",
+      protocol_treasury_script_hash: #"b4971034feee",
+      share_ratio: 20000,
+      open_fee: 20_000_000,
+      open_fee_policy_id: #"",
+      open_fee_token_name: #"",
+      project_authtoken_policy_id: project_info_nft_policy_id,
+      project_info_token_name: project_info_nft_tn,
+      project_prediction_token_name: project_prediction_nft_tn,
+      protocol_stake_key_hash,
+    }
+  let psetting_ref =
+    OutputReference {
+      transaction_id: #"b4971034feee28d07f157faf99b850",
+      output_index: 0,
+    }
+  let psetting_ref_input =
+    Input {
+      output_reference: psetting_ref,
+      output: Output {
+        address: from_script(#"11"),
+        value: assets.zero
+          |> assets.add(protocol_nft_policy_id, psetting_nft_tn, 1),
+        datum: InlineDatum(psetting_datum),
+        reference_script: None,
+      },
+    }
   let project_info_ref_id =
     OutputReference {
       transaction_id: #"d07f157faf99b850b4971034feee28",
@@ -1554,7 +1633,6 @@ test predictions__spend_reward__ada() {
       payment_policy_id: #"",
       payment_token_name: "",
       batcher_policy_id: #"6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e",
-      treasury_script_hash: #"f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2",
       position_script_hash: #"702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86",
       share_policy_id: #"2d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c425",
       oracle_policy_id: #"f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9",
@@ -1573,9 +1651,14 @@ test predictions__spend_reward__ada() {
     Input {
       output_reference: project_info_ref,
       output: Output {
-        address: from_script(#"11"),
+        address: from_script(project_info_script_hash)
+          |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
         value: assets.zero
-          |> assets.add(project_info_nft_policy_id, project_info_nft_tn, 1),
+          |> assets.add(
+              psetting_datum.project_authtoken_policy_id,
+              psetting_datum.project_info_token_name,
+              1,
+            ),
         datum: InlineDatum(project_info_datum),
         reference_script: None,
       },
@@ -1584,7 +1667,7 @@ test predictions__spend_reward__ada() {
     ProjectPredictionDatum {
       outref_id: project_info_ref_id,
       total_fee: 0,
-      predictions: [Pair("cand_1", 100), Pair("cand_2", 400)],
+      predictions: [("cand_1", 100), ("cand_2", 400)],
     }
   let own_ref =
     OutputReference {
@@ -1595,11 +1678,12 @@ test predictions__spend_reward__ada() {
     Input {
       output_reference: own_ref,
       output: Output {
-        address: from_script(#""),
+        address: from_script(project_prediction_script_hash)
+          |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
         value: assets.from_lovelace(2_000_000)
           |> assets.add(
-              project_prediction_nft_policy_id,
-              project_prediction_nft_tn,
+              psetting_datum.project_authtoken_policy_id,
+              psetting_datum.project_prediction_token_name,
               1,
             )
           |> assets.add(
@@ -1617,15 +1701,16 @@ test predictions__spend_reward__ada() {
     ProjectPredictionDatum {
       outref_id: project_info_ref_id,
       total_fee: pred_datum.total_fee + fee,
-      predictions: [Pair("cand_1", 90), Pair("cand_2", 400)],
+      predictions: [("cand_1", 90), ("cand_2", 400)],
     }
   let pred_out =
     Output {
-      address: from_script(#""),
+      address: from_script(project_prediction_script_hash)
+        |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
       value: assets.from_lovelace(2_000_000)
         |> assets.add(
-            project_prediction_nft_policy_id,
-            project_prediction_nft_tn,
+            psetting_datum.project_authtoken_policy_id,
+            psetting_datum.project_prediction_token_name,
             1,
           )
         |> assets.add(
@@ -1643,6 +1728,7 @@ test predictions__spend_reward__ada() {
     }
   let pos_datum =
     PositionDatum {
+      outref_id: project_info_ref_id,
       pos_user_pkh: #"6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b",
       pos_user_stake_key: #"c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3",
       pos_type: RewardPos,
@@ -1737,37 +1823,6 @@ test predictions__spend_reward__ada() {
     }
   let mint =
     assets.from_asset(project_info_datum.share_policy_id, "cand_1", -10)
-  let psetting_datum =
-    PSettingDatum {
-      pledge: 100_000_000,
-      pledge_policy_id: #"",
-      pledge_token_name: #"",
-      protocol_treasury_script_hash: #"b4971034feee",
-      share_ratio: 20000,
-      open_fee: 20_000_000,
-      open_fee_policy_id: #"",
-      open_fee_token_name: #"",
-      project_authtoken_policy_id: project_info_nft_policy_id,
-      project_info_token_name: #"",
-      project_prediction_token_name: #"",
-      protocol_stake_key_hash: #"",
-    }
-  let psetting_ref =
-    OutputReference {
-      transaction_id: #"b4971034feee28d07f157faf99b850",
-      output_index: 0,
-    }
-  let psetting_ref_input =
-    Input {
-      output_reference: psetting_ref,
-      output: Output {
-        address: from_script(#"11"),
-        value: assets.zero
-          |> assets.add(protocol_nft_policy_id, psetting_nft_tn, 1),
-        datum: InlineDatum(psetting_datum),
-        reference_script: None,
-      },
-    }
   let tx =
     Transaction {
       inputs: [pred_input, pos_input, license_input],
@@ -1817,6 +1872,43 @@ test predictions__spend_reward__ada() {
 }
 
 test predictions__spend_refund() {
+  let project_info_script_hash =
+    #"8db00d760acf62c0ebaa5ff2c36e9eeb9655d06c0a2f02d9e200aa6f"
+  let project_prediction_script_hash =
+    #"9655d06c0a2f02d9e200aa6f8db00d760acf62c0ebaa5ff2c36e9eeb"
+  let protocol_stake_key_hash =
+    #"eb9655d06c0a2f02d9e200aa6f8db00d760acf62c0ebaa5ff2c36e9e"
+  let psetting_datum =
+    PSettingDatum {
+      pledge: 100_000_000,
+      pledge_policy_id: #"",
+      pledge_token_name: #"",
+      protocol_treasury_script_hash: #"b4971034feee",
+      share_ratio: 20000,
+      open_fee: 20_000_000,
+      open_fee_policy_id: #"",
+      open_fee_token_name: #"",
+      project_authtoken_policy_id: project_info_nft_policy_id,
+      project_info_token_name: project_info_nft_tn,
+      project_prediction_token_name: project_prediction_nft_tn,
+      protocol_stake_key_hash,
+    }
+  let psetting_ref =
+    OutputReference {
+      transaction_id: #"b4971034feee28d07f157faf99b850",
+      output_index: 0,
+    }
+  let psetting_ref_input =
+    Input {
+      output_reference: psetting_ref,
+      output: Output {
+        address: from_script(#"11"),
+        value: assets.zero
+          |> assets.add(protocol_nft_policy_id, psetting_nft_tn, 1),
+        datum: InlineDatum(psetting_datum),
+        reference_script: None,
+      },
+    }
   let project_info_ref_id =
     OutputReference {
       transaction_id: #"d07f157faf99b850b4971034feee28",
@@ -1831,7 +1923,6 @@ test predictions__spend_refund() {
       payment_policy_id: #"3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe",
       payment_token_name: "token_name",
       batcher_policy_id: #"6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e",
-      treasury_script_hash: #"f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2",
       position_script_hash: #"702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86",
       share_policy_id: #"2d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c425",
       oracle_policy_id: #"f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9",
@@ -1850,9 +1941,14 @@ test predictions__spend_refund() {
     Input {
       output_reference: project_info_ref,
       output: Output {
-        address: from_script(#"11"),
+        address: from_script(project_info_script_hash)
+          |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
         value: assets.zero
-          |> assets.add(project_info_nft_policy_id, project_info_nft_tn, 1),
+          |> assets.add(
+              psetting_datum.project_authtoken_policy_id,
+              psetting_datum.project_info_token_name,
+              1,
+            ),
         datum: InlineDatum(project_info_datum),
         reference_script: None,
       },
@@ -1861,7 +1957,7 @@ test predictions__spend_refund() {
     ProjectPredictionDatum {
       outref_id: project_info_ref_id,
       total_fee: 0,
-      predictions: [Pair("cand_1", 100), Pair("cand_2", 400)],
+      predictions: [("cand_1", 100), ("cand_2", 400)],
     }
   let own_ref =
     OutputReference {
@@ -1872,11 +1968,12 @@ test predictions__spend_refund() {
     Input {
       output_reference: own_ref,
       output: Output {
-        address: from_script(#""),
+        address: from_script(project_prediction_script_hash)
+          |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
         value: assets.from_lovelace(2_000_000)
           |> assets.add(
-              project_prediction_nft_policy_id,
-              project_prediction_nft_tn,
+              psetting_datum.project_authtoken_policy_id,
+              psetting_datum.project_prediction_token_name,
               1,
             )
           |> assets.add(
@@ -1894,15 +1991,16 @@ test predictions__spend_refund() {
     ProjectPredictionDatum {
       outref_id: project_info_ref_id,
       total_fee: pred_datum.total_fee + fee,
-      predictions: [Pair("cand_1", 90), Pair("cand_2", 400)],
+      predictions: [("cand_1", 90), ("cand_2", 400)],
     }
   let pred_out =
     Output {
-      address: from_script(#""),
+      address: from_script(project_prediction_script_hash)
+        |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
       value: assets.from_lovelace(2_000_000)
         |> assets.add(
-            project_prediction_nft_policy_id,
-            project_prediction_nft_tn,
+            psetting_datum.project_authtoken_policy_id,
+            psetting_datum.project_prediction_token_name,
             1,
           )
         |> assets.add(
@@ -1920,6 +2018,7 @@ test predictions__spend_refund() {
     }
   let pos_datum =
     PositionDatum {
+      outref_id: project_info_ref_id,
       pos_user_pkh: #"6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b",
       pos_user_stake_key: #"c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3",
       pos_type: RefundPos,
@@ -1993,37 +2092,6 @@ test predictions__spend_refund() {
     }
   let mint =
     assets.from_asset(project_info_datum.share_policy_id, "cand_1", -10)
-  let psetting_datum =
-    PSettingDatum {
-      pledge: 100_000_000,
-      pledge_policy_id: #"",
-      pledge_token_name: #"",
-      protocol_treasury_script_hash: #"b4971034feee",
-      share_ratio: 20000,
-      open_fee: 20_000_000,
-      open_fee_policy_id: #"",
-      open_fee_token_name: #"",
-      project_authtoken_policy_id: project_info_nft_policy_id,
-      project_info_token_name: #"",
-      project_prediction_token_name: #"",
-      protocol_stake_key_hash: #"",
-    }
-  let psetting_ref =
-    OutputReference {
-      transaction_id: #"b4971034feee28d07f157faf99b850",
-      output_index: 0,
-    }
-  let psetting_ref_input =
-    Input {
-      output_reference: psetting_ref,
-      output: Output {
-        address: from_script(#"11"),
-        value: assets.zero
-          |> assets.add(protocol_nft_policy_id, psetting_nft_tn, 1),
-        datum: InlineDatum(psetting_datum),
-        reference_script: None,
-      },
-    }
   let tx =
     Transaction {
       inputs: [pred_input, pos_input, license_input],
@@ -2072,6 +2140,41 @@ test predictions__spend_refund() {
 }
 
 test predictions__spend_refund__ada() {
+  let project_prediction_script_hash =
+    #"9655d06c0a2f02d9e200aa6f8db00d760acf62c0ebaa5ff2c36e9eeb"
+  let protocol_stake_key_hash =
+    #"eb9655d06c0a2f02d9e200aa6f8db00d760acf62c0ebaa5ff2c36e9e"
+  let psetting_datum =
+    PSettingDatum {
+      pledge: 100_000_000,
+      pledge_policy_id: #"",
+      pledge_token_name: #"",
+      protocol_treasury_script_hash: #"b4971034feee",
+      share_ratio: 20000,
+      open_fee: 20_000_000,
+      open_fee_policy_id: #"",
+      open_fee_token_name: #"",
+      project_authtoken_policy_id: project_info_nft_policy_id,
+      project_info_token_name: project_info_nft_tn,
+      project_prediction_token_name: project_prediction_nft_tn,
+      protocol_stake_key_hash,
+    }
+  let psetting_ref =
+    OutputReference {
+      transaction_id: #"b4971034feee28d07f157faf99b850",
+      output_index: 0,
+    }
+  let psetting_ref_input =
+    Input {
+      output_reference: psetting_ref,
+      output: Output {
+        address: from_script(#"11"),
+        value: assets.zero
+          |> assets.add(protocol_nft_policy_id, psetting_nft_tn, 1),
+        datum: InlineDatum(psetting_datum),
+        reference_script: None,
+      },
+    }
   let project_info_ref_id =
     OutputReference {
       transaction_id: #"d07f157faf99b850b4971034feee28",
@@ -2086,7 +2189,6 @@ test predictions__spend_refund__ada() {
       payment_policy_id: #"",
       payment_token_name: "",
       batcher_policy_id: #"6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e",
-      treasury_script_hash: #"f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2",
       position_script_hash: #"702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86",
       share_policy_id: #"2d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c425",
       oracle_policy_id: #"f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9",
@@ -2116,7 +2218,7 @@ test predictions__spend_refund__ada() {
     ProjectPredictionDatum {
       outref_id: project_info_ref_id,
       total_fee: 0,
-      predictions: [Pair("cand_1", 100), Pair("cand_2", 400)],
+      predictions: [("cand_1", 100), ("cand_2", 400)],
     }
   let own_ref =
     OutputReference {
@@ -2127,11 +2229,12 @@ test predictions__spend_refund__ada() {
     Input {
       output_reference: own_ref,
       output: Output {
-        address: from_script(#""),
+        address: from_script(project_prediction_script_hash)
+          |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
         value: assets.from_lovelace(2_000_000)
           |> assets.add(
-              project_prediction_nft_policy_id,
-              project_prediction_nft_tn,
+              psetting_datum.project_authtoken_policy_id,
+              psetting_datum.project_prediction_token_name,
               1,
             )
           |> assets.add(
@@ -2149,15 +2252,16 @@ test predictions__spend_refund__ada() {
     ProjectPredictionDatum {
       outref_id: project_info_ref_id,
       total_fee: pred_datum.total_fee + fee,
-      predictions: [Pair("cand_1", 90), Pair("cand_2", 400)],
+      predictions: [("cand_1", 90), ("cand_2", 400)],
     }
   let pred_out =
     Output {
-      address: from_script(#""),
+      address: from_script(project_prediction_script_hash)
+        |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
       value: assets.from_lovelace(2_000_000)
         |> assets.add(
-            project_prediction_nft_policy_id,
-            project_prediction_nft_tn,
+            psetting_datum.project_authtoken_policy_id,
+            psetting_datum.project_prediction_token_name,
             1,
           )
         |> assets.add(
@@ -2175,6 +2279,7 @@ test predictions__spend_refund__ada() {
     }
   let pos_datum =
     PositionDatum {
+      outref_id: project_info_ref_id,
       pos_user_pkh: #"6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b",
       pos_user_stake_key: #"c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3",
       pos_type: RefundPos,
@@ -2248,37 +2353,6 @@ test predictions__spend_refund__ada() {
     }
   let mint =
     assets.from_asset(project_info_datum.share_policy_id, "cand_1", -10)
-  let psetting_datum =
-    PSettingDatum {
-      pledge: 100_000_000,
-      pledge_policy_id: #"",
-      pledge_token_name: #"",
-      protocol_treasury_script_hash: #"b4971034feee",
-      share_ratio: 20000,
-      open_fee: 20_000_000,
-      open_fee_policy_id: #"",
-      open_fee_token_name: #"",
-      project_authtoken_policy_id: project_info_nft_policy_id,
-      project_info_token_name: #"",
-      project_prediction_token_name: #"",
-      protocol_stake_key_hash: #"",
-    }
-  let psetting_ref =
-    OutputReference {
-      transaction_id: #"b4971034feee28d07f157faf99b850",
-      output_index: 0,
-    }
-  let psetting_ref_input =
-    Input {
-      output_reference: psetting_ref,
-      output: Output {
-        address: from_script(#"11"),
-        value: assets.zero
-          |> assets.add(protocol_nft_policy_id, psetting_nft_tn, 1),
-        datum: InlineDatum(psetting_datum),
-        reference_script: None,
-      },
-    }
   let tx =
     Transaction {
       inputs: [pred_input, pos_input, license_input],
@@ -2327,6 +2401,43 @@ test predictions__spend_refund__ada() {
 }
 
 test predictions__spend_withdraw_admin_fee() {
+  let project_info_script_hash =
+    #"8db00d760acf62c0ebaa5ff2c36e9eeb9655d06c0a2f02d9e200aa6f"
+  let project_prediction_script_hash =
+    #"9655d06c0a2f02d9e200aa6f8db00d760acf62c0ebaa5ff2c36e9eeb"
+  let protocol_stake_key_hash =
+    #"eb9655d06c0a2f02d9e200aa6f8db00d760acf62c0ebaa5ff2c36e9e"
+  let psetting_datum =
+    PSettingDatum {
+      pledge: 100_000_000,
+      pledge_policy_id: #"",
+      pledge_token_name: #"",
+      protocol_treasury_script_hash: #"b4971034feee",
+      share_ratio: 20000,
+      open_fee: 20_000_000,
+      open_fee_policy_id: #"",
+      open_fee_token_name: #"",
+      project_authtoken_policy_id: project_info_nft_policy_id,
+      project_info_token_name: project_info_nft_tn,
+      project_prediction_token_name: project_prediction_nft_tn,
+      protocol_stake_key_hash,
+    }
+  let psetting_ref =
+    OutputReference {
+      transaction_id: #"b4971034feee28d07f157faf99b850",
+      output_index: 0,
+    }
+  let psetting_ref_input =
+    Input {
+      output_reference: psetting_ref,
+      output: Output {
+        address: from_script(#"11"),
+        value: assets.zero
+          |> assets.add(protocol_nft_policy_id, psetting_nft_tn, 1),
+        datum: InlineDatum(psetting_datum),
+        reference_script: None,
+      },
+    }
   let project_info_ref_id =
     OutputReference {
       transaction_id: #"d07f157faf99b850b4971034feee28",
@@ -2341,7 +2452,6 @@ test predictions__spend_withdraw_admin_fee() {
       payment_policy_id: #"3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe",
       payment_token_name: "token_name",
       batcher_policy_id: #"6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e",
-      treasury_script_hash: #"f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2",
       position_script_hash: #"702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86",
       share_policy_id: #"2d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c425",
       oracle_policy_id: #"f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9",
@@ -2360,9 +2470,14 @@ test predictions__spend_withdraw_admin_fee() {
     Input {
       output_reference: project_info_ref,
       output: Output {
-        address: from_script(#"11"),
+        address: from_script(project_info_script_hash)
+          |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
         value: assets.zero
-          |> assets.add(project_info_nft_policy_id, project_info_nft_tn, 1),
+          |> assets.add(
+              psetting_datum.project_authtoken_policy_id,
+              psetting_datum.project_info_token_name,
+              1,
+            ),
         datum: InlineDatum(project_info_datum),
         reference_script: None,
       },
@@ -2371,7 +2486,7 @@ test predictions__spend_withdraw_admin_fee() {
     ProjectPredictionDatum {
       outref_id: project_info_ref_id,
       total_fee: 25 * decimals,
-      predictions: [Pair("cand_1", 100), Pair("cand_2", 400)],
+      predictions: [("cand_1", 100), ("cand_2", 400)],
     }
   let own_ref =
     OutputReference {
@@ -2382,11 +2497,12 @@ test predictions__spend_withdraw_admin_fee() {
     Input {
       output_reference: own_ref,
       output: Output {
-        address: from_script(#""),
+        address: from_script(project_prediction_script_hash)
+          |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
         value: assets.from_lovelace(2_000_000)
           |> assets.add(
-              project_prediction_nft_policy_id,
-              project_prediction_nft_tn,
+              psetting_datum.project_authtoken_policy_id,
+              psetting_datum.project_prediction_token_name,
               1,
             )
           |> assets.add(
@@ -2402,15 +2518,16 @@ test predictions__spend_withdraw_admin_fee() {
     ProjectPredictionDatum {
       outref_id: project_info_ref_id,
       total_fee: 0,
-      predictions: [Pair("cand_1", 100), Pair("cand_2", 400)],
+      predictions: [("cand_1", 100), ("cand_2", 400)],
     }
   let pred_out =
     Output {
-      address: from_script(#""),
+      address: from_script(project_prediction_script_hash)
+        |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
       value: assets.from_lovelace(2_000_000)
         |> assets.add(
-            project_prediction_nft_policy_id,
-            project_prediction_nft_tn,
+            psetting_datum.project_authtoken_policy_id,
+            psetting_datum.project_prediction_token_name,
             1,
           )
         |> assets.add(
@@ -2423,7 +2540,7 @@ test predictions__spend_withdraw_admin_fee() {
     }
   let treasury_out =
     Output {
-      address: from_script(project_info_datum.treasury_script_hash),
+      address: from_script(psetting_datum.protocol_treasury_script_hash),
       value: assets.from_lovelace(2_000_000)
         |> assets.add(
             project_info_datum.payment_policy_id,
@@ -2462,37 +2579,6 @@ test predictions__spend_withdraw_admin_fee() {
       ),
       datum: NoDatum,
       reference_script: None,
-    }
-  let psetting_datum =
-    PSettingDatum {
-      pledge: 100_000_000,
-      pledge_policy_id: #"",
-      pledge_token_name: #"",
-      protocol_treasury_script_hash: #"b4971034feee",
-      share_ratio: 20000,
-      open_fee: 20_000_000,
-      open_fee_policy_id: #"",
-      open_fee_token_name: #"",
-      project_authtoken_policy_id: project_info_nft_policy_id,
-      project_info_token_name: #"",
-      project_prediction_token_name: #"",
-      protocol_stake_key_hash: #"",
-    }
-  let psetting_ref =
-    OutputReference {
-      transaction_id: #"b4971034feee28d07f157faf99b850",
-      output_index: 0,
-    }
-  let psetting_ref_input =
-    Input {
-      output_reference: psetting_ref,
-      output: Output {
-        address: from_script(#"11"),
-        value: assets.zero
-          |> assets.add(protocol_nft_policy_id, psetting_nft_tn, 1),
-        datum: InlineDatum(psetting_datum),
-        reference_script: None,
-      },
     }
   let tx =
     Transaction {
@@ -2542,6 +2628,43 @@ test predictions__spend_withdraw_admin_fee() {
 }
 
 test predictions__spend_withdraw_admin_fee__ada() {
+  let project_info_script_hash =
+    #"8db00d760acf62c0ebaa5ff2c36e9eeb9655d06c0a2f02d9e200aa6f"
+  let project_prediction_script_hash =
+    #"9655d06c0a2f02d9e200aa6f8db00d760acf62c0ebaa5ff2c36e9eeb"
+  let protocol_stake_key_hash =
+    #"eb9655d06c0a2f02d9e200aa6f8db00d760acf62c0ebaa5ff2c36e9e"
+  let psetting_datum =
+    PSettingDatum {
+      pledge: 100_000_000,
+      pledge_policy_id: #"",
+      pledge_token_name: #"",
+      protocol_treasury_script_hash: #"b4971034feee",
+      share_ratio: 20000,
+      open_fee: 20_000_000,
+      open_fee_policy_id: #"",
+      open_fee_token_name: #"",
+      project_authtoken_policy_id: project_info_nft_policy_id,
+      project_info_token_name: project_info_nft_tn,
+      project_prediction_token_name: project_prediction_nft_tn,
+      protocol_stake_key_hash,
+    }
+  let psetting_ref =
+    OutputReference {
+      transaction_id: #"b4971034feee28d07f157faf99b850",
+      output_index: 0,
+    }
+  let psetting_ref_input =
+    Input {
+      output_reference: psetting_ref,
+      output: Output {
+        address: from_script(#"11"),
+        value: assets.zero
+          |> assets.add(protocol_nft_policy_id, psetting_nft_tn, 1),
+        datum: InlineDatum(psetting_datum),
+        reference_script: None,
+      },
+    }
   let project_info_ref_id =
     OutputReference {
       transaction_id: #"d07f157faf99b850b4971034feee28",
@@ -2556,7 +2679,6 @@ test predictions__spend_withdraw_admin_fee__ada() {
       payment_policy_id: #"",
       payment_token_name: "",
       batcher_policy_id: #"6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e",
-      treasury_script_hash: #"f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2",
       position_script_hash: #"702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86",
       share_policy_id: #"2d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c425",
       oracle_policy_id: #"f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9",
@@ -2575,9 +2697,14 @@ test predictions__spend_withdraw_admin_fee__ada() {
     Input {
       output_reference: project_info_ref,
       output: Output {
-        address: from_script(#"11"),
+        address: from_script(project_info_script_hash)
+          |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
         value: assets.zero
-          |> assets.add(project_info_nft_policy_id, project_info_nft_tn, 1),
+          |> assets.add(
+              psetting_datum.project_authtoken_policy_id,
+              psetting_datum.project_info_token_name,
+              1,
+            ),
         datum: InlineDatum(project_info_datum),
         reference_script: None,
       },
@@ -2586,7 +2713,7 @@ test predictions__spend_withdraw_admin_fee__ada() {
     ProjectPredictionDatum {
       outref_id: project_info_ref_id,
       total_fee: 25 * decimals,
-      predictions: [Pair("cand_1", 100), Pair("cand_2", 400)],
+      predictions: [("cand_1", 100), ("cand_2", 400)],
     }
   let own_ref =
     OutputReference {
@@ -2597,11 +2724,12 @@ test predictions__spend_withdraw_admin_fee__ada() {
     Input {
       output_reference: own_ref,
       output: Output {
-        address: from_script(#""),
+        address: from_script(project_prediction_script_hash)
+          |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
         value: assets.from_lovelace(2_000_000)
           |> assets.add(
-              project_prediction_nft_policy_id,
-              project_prediction_nft_tn,
+              psetting_datum.project_authtoken_policy_id,
+              psetting_datum.project_prediction_token_name,
               1,
             )
           |> assets.add(
@@ -2617,15 +2745,16 @@ test predictions__spend_withdraw_admin_fee__ada() {
     ProjectPredictionDatum {
       outref_id: project_info_ref_id,
       total_fee: 0,
-      predictions: [Pair("cand_1", 100), Pair("cand_2", 400)],
+      predictions: [("cand_1", 100), ("cand_2", 400)],
     }
   let pred_out =
     Output {
-      address: from_script(#""),
+      address: from_script(project_prediction_script_hash)
+        |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
       value: assets.from_lovelace(2_000_000)
         |> assets.add(
-            project_prediction_nft_policy_id,
-            project_prediction_nft_tn,
+            psetting_datum.project_authtoken_policy_id,
+            psetting_datum.project_prediction_token_name,
             1,
           )
         |> assets.add(
@@ -2638,7 +2767,7 @@ test predictions__spend_withdraw_admin_fee__ada() {
     }
   let treasury_out =
     Output {
-      address: from_script(project_info_datum.treasury_script_hash),
+      address: from_script(psetting_datum.protocol_treasury_script_hash),
       value: assets.from_lovelace(2_000_000)
         |> assets.add(
             project_info_datum.payment_policy_id,
@@ -2677,37 +2806,6 @@ test predictions__spend_withdraw_admin_fee__ada() {
       ),
       datum: NoDatum,
       reference_script: None,
-    }
-  let psetting_datum =
-    PSettingDatum {
-      pledge: 100_000_000,
-      pledge_policy_id: #"",
-      pledge_token_name: #"",
-      protocol_treasury_script_hash: #"b4971034feee",
-      share_ratio: 20000,
-      open_fee: 20_000_000,
-      open_fee_policy_id: #"",
-      open_fee_token_name: #"",
-      project_authtoken_policy_id: project_info_nft_policy_id,
-      project_info_token_name: #"",
-      project_prediction_token_name: #"",
-      protocol_stake_key_hash: #"",
-    }
-  let psetting_ref =
-    OutputReference {
-      transaction_id: #"b4971034feee28d07f157faf99b850",
-      output_index: 0,
-    }
-  let psetting_ref_input =
-    Input {
-      output_reference: psetting_ref,
-      output: Output {
-        address: from_script(#"11"),
-        value: assets.zero
-          |> assets.add(protocol_nft_policy_id, psetting_nft_tn, 1),
-        datum: InlineDatum(psetting_datum),
-        reference_script: None,
-      },
     }
   let tx =
     Transaction {

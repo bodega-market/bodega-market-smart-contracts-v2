@@ -66,6 +66,7 @@ validator project_shares(params: ShareParams) {
               expect InlineDatum(pos_output_datum) = output.datum
               expect pos_datum: PositionDatum = pos_output_datum
               expect pos_datum.pos_batcher_fee > 0 && pos_datum.pos_amount > 0
+              expect pos_datum.outref_id == project_info_datum.outref_id
               expect pos_datum.pos_type == BuyPos
               let admin_fee_amount =
                 pos_datum.pos_amount * project_info_datum.admin_fee_percent * decimals / multiplier
@@ -130,7 +131,7 @@ test shares__mint_reward() {
     ProjectPredictionDatum {
       outref_id: own_ref_id,
       total_fee: 100_000_000,
-      predictions: [Pair("cand_1", 10), Pair("cand_2", 20)],
+      predictions: [("cand_1", 10), ("cand_2", 20)],
     }
   let own_ref =
     OutputReference {
@@ -191,7 +192,7 @@ test shares__mint_refund() {
     ProjectPredictionDatum {
       outref_id: project_info_ref_id,
       total_fee: 100_000_000,
-      predictions: [Pair("cand_1", 10), Pair("cand_2", 20)],
+      predictions: [("cand_1", 10), ("cand_2", 20)],
     }
   let own_ref =
     OutputReference {
@@ -257,7 +258,6 @@ test shares__mint_buy() {
       payment_policy_id: #"3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe",
       payment_token_name: "token_name",
       batcher_policy_id: #"6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e",
-      treasury_script_hash: #"f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2",
       position_script_hash: #"702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86",
       share_policy_id: #"2d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c425",
       oracle_policy_id: #"f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9",
@@ -286,6 +286,7 @@ test shares__mint_buy() {
   let mint = assets.from_asset(share_policy_id, "cand_1", 10)
   let pos_datum =
     PositionDatum {
+      outref_id: project_info_ref_id,
       pos_user_pkh,
       pos_user_stake_key,
       pos_type: BuyPos,
@@ -358,7 +359,6 @@ test shares__mint_buy_incorrect_time_range() fail {
       payment_policy_id: #"3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe",
       payment_token_name: "token_name",
       batcher_policy_id: #"6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e",
-      treasury_script_hash: #"f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2",
       position_script_hash: #"702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86",
       share_policy_id: #"2d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c425",
       oracle_policy_id: #"f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9",
@@ -387,6 +387,7 @@ test shares__mint_buy_incorrect_time_range() fail {
   let mint = assets.from_asset(share_policy_id, "cand_1", 10)
   let pos_datum =
     PositionDatum {
+      outref_id: project_info_ref_id,
       pos_user_pkh,
       pos_user_stake_key,
       pos_type: BuyPos,
@@ -459,7 +460,6 @@ test shares__mint_buy__incorrect_fee() fail {
       payment_policy_id: #"3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe",
       payment_token_name: "token_name",
       batcher_policy_id: #"6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e",
-      treasury_script_hash: #"f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2",
       position_script_hash: #"702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86",
       share_policy_id: #"2d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c425",
       oracle_policy_id: #"f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9",
@@ -488,6 +488,7 @@ test shares__mint_buy__incorrect_fee() fail {
   let mint = assets.from_asset(share_policy_id, "cand_1", 10)
   let pos_datum =
     PositionDatum {
+      outref_id: project_info_ref_id,
       pos_user_pkh,
       pos_user_stake_key,
       pos_type: BuyPos,
@@ -560,7 +561,6 @@ test shares__mint_buy__incorrect_mint() fail {
       payment_policy_id: #"3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe",
       payment_token_name: "token_name",
       batcher_policy_id: #"6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e",
-      treasury_script_hash: #"f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2",
       position_script_hash: #"702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86",
       share_policy_id: #"2d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c425",
       oracle_policy_id: #"f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9",
@@ -589,6 +589,7 @@ test shares__mint_buy__incorrect_mint() fail {
   let mint = assets.from_asset(share_policy_id, "cand_2", 10)
   let pos_datum =
     PositionDatum {
+      outref_id: project_info_ref_id,
       pos_user_pkh,
       pos_user_stake_key,
       pos_type: BuyPos,
@@ -661,7 +662,6 @@ test shares__mint_buy__incorrect_candidate() fail {
       payment_policy_id: #"3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe",
       payment_token_name: "token_name",
       batcher_policy_id: #"6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e",
-      treasury_script_hash: #"f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2",
       position_script_hash: #"702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86",
       share_policy_id: #"2d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c425",
       oracle_policy_id: #"f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9",
@@ -690,6 +690,7 @@ test shares__mint_buy__incorrect_candidate() fail {
   let mint = assets.from_asset(share_policy_id, "cand_3", 10)
   let pos_datum =
     PositionDatum {
+      outref_id: project_info_ref_id,
       pos_user_pkh,
       pos_user_stake_key,
       pos_type: BuyPos,
@@ -762,7 +763,6 @@ test shares__mint_buy__ada_payment() {
       payment_policy_id: #"",
       payment_token_name: "",
       batcher_policy_id: #"6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e",
-      treasury_script_hash: #"f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2",
       position_script_hash: #"702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86",
       share_policy_id: #"2d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c425",
       oracle_policy_id: #"f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9",
@@ -791,6 +791,7 @@ test shares__mint_buy__ada_payment() {
   let mint = assets.from_asset(share_policy_id, "cand_1", 10)
   let pos_datum =
     PositionDatum {
+      outref_id: project_info_ref_id,
       pos_user_pkh,
       pos_user_stake_key,
       pos_type: BuyPos,

@@ -18,7 +18,6 @@ pub type ProjectInfoDatum {
   payment_policy_id: ByteArray,
   payment_token_name: ByteArray,
   batcher_policy_id: ByteArray,
-  treasury_script_hash: ByteArray,
   position_script_hash: ByteArray,
   share_policy_id: ByteArray,
   oracle_policy_id: ByteArray,
@@ -32,7 +31,7 @@ pub type ProjectInfoDatum {
 pub type ProjectPredictionDatum {
   outref_id: OutputReference,
   total_fee: Int,
-  predictions: List<Pair<ByteArray, Int>>,
+  predictions: List<(ByteArray, Int)>,
 }
 
 pub type PSettingDatum {
@@ -58,6 +57,7 @@ pub type PositionType {
 }
 
 pub type PositionDatum {
+  outref_id: OutputReference,
   pos_user_pkh: PubKeyHash,
   pos_user_stake_key: PubKeyHash,
   pos_type: PositionType,

@@ -40,8 +40,14 @@ validator positions(prediction_nft: Asset) {
 }
 
 test positions__spend_buy_pos() {
+  let project_info_ref_id =
+    OutputReference {
+      transaction_id: #"d07f157faf99b850b4971034feee28",
+      output_index: 0,
+    }
   let position_datum =
     PositionDatum {
+      outref_id: project_info_ref_id,
       pos_user_pkh: #"6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b",
       pos_user_stake_key: #"c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3",
       pos_type: BuyPos,
@@ -115,8 +121,14 @@ test positions__spend_buy_pos() {
 }
 
 test positions__spend_reward_pos() {
+  let project_info_ref_id =
+    OutputReference {
+      transaction_id: #"d07f157faf99b850b4971034feee28",
+      output_index: 0,
+    }
   let position_datum =
     PositionDatum {
+      outref_id: project_info_ref_id,
       pos_user_pkh: #"6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b",
       pos_user_stake_key: #"c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3",
       pos_type: RewardPos,
@@ -190,8 +202,14 @@ test positions__spend_reward_pos() {
 }
 
 test positions__spend_refund_pos() {
+  let project_info_ref_id =
+    OutputReference {
+      transaction_id: #"d07f157faf99b850b4971034feee28",
+      output_index: 0,
+    }
   let position_datum =
     PositionDatum {
+      outref_id: project_info_ref_id,
       pos_user_pkh: #"6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b",
       pos_user_stake_key: #"c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3",
       pos_type: RefundPos,
