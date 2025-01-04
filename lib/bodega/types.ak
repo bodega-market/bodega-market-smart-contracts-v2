@@ -59,7 +59,7 @@ pub type PositionType {
 pub type PositionDatum {
   outref_id: OutputReference,
   pos_user_pkh: PubKeyHash,
-  pos_user_stake_key: PubKeyHash,
+  pos_user_stake_key: Option<PubKeyHash>,
   pos_type: PositionType,
   pos_amount: Int,
   pos_batcher_fee: Int,

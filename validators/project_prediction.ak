@@ -151,8 +151,12 @@ validator project_prediction(
               expect pos_datum.outref_id == project_info_datum.outref_id
               expect pos_datum.pos_type == BuyPos
               let user_address =
-                address.from_verification_key(pos_datum.pos_user_pkh)
-                  |> address.with_delegation_key(pos_datum.pos_user_stake_key)
+                when pos_datum.pos_user_stake_key is {
+                  Some(key) ->
+                    address.from_verification_key(pos_datum.pos_user_pkh)
+                      |> address.with_delegation_key(key)
+                  None -> address.from_verification_key(pos_datum.pos_user_pkh)
+                }
               expect user_address == out.address
               expect
                 list.has(project_info_datum.candidates, pos_datum.pos_candidate)
@@ -344,8 +348,12 @@ validator project_prediction(
               expect pos_datum.outref_id == project_info_datum.outref_id
               expect pos_datum.pos_type == RewardPos
               let user_address =
-                address.from_verification_key(pos_datum.pos_user_pkh)
-                  |> address.with_delegation_key(pos_datum.pos_user_stake_key)
+                when pos_datum.pos_user_stake_key is {
+                  Some(key) ->
+                    address.from_verification_key(pos_datum.pos_user_pkh)
+                      |> address.with_delegation_key(key)
+                  None -> address.from_verification_key(pos_datum.pos_user_pkh)
+                }
               expect user_address == out.address
               expect
                 list.has(project_info_datum.candidates, pos_datum.pos_candidate)
@@ -537,8 +545,12 @@ validator project_prediction(
               expect pos_datum: PositionDatum = pos_inline_datum
               expect pos_datum.outref_id == project_info_datum.outref_id
               let user_address =
-                address.from_verification_key(pos_datum.pos_user_pkh)
-                  |> address.with_delegation_key(pos_datum.pos_user_stake_key)
+                when pos_datum.pos_user_stake_key is {
+                  Some(key) ->
+                    address.from_verification_key(pos_datum.pos_user_pkh)
+                      |> address.with_delegation_key(key)
+                  None -> address.from_verification_key(pos_datum.pos_user_pkh)
+                }
               expect user_address == out.address
               expect
                 list.has(project_info_datum.candidates, pos_datum.pos_candidate)
@@ -921,7 +933,9 @@ test predictions__spend_apply() {
     PositionDatum {
       outref_id: project_info_ref_id,
       pos_user_pkh: #"6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b",
-      pos_user_stake_key: #"c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3",
+      pos_user_stake_key: Some(
+        #"c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3",
+      ),
       pos_type: BuyPos,
       pos_amount: amount,
       pos_batcher_fee: 30_000,
@@ -948,10 +962,16 @@ test predictions__spend_apply() {
         reference_script: None,
       },
     }
+  let user_address =
+    when pos_datum.pos_user_stake_key is {
+      Some(key) ->
+        address.from_verification_key(pos_datum.pos_user_pkh)
+          |> address.with_delegation_key(key)
+      None -> address.from_verification_key(pos_datum.pos_user_pkh)
+    }
   let user_pos_out =
     Output {
-      address: address.from_verification_key(pos_datum.pos_user_pkh)
-        |> address.with_delegation_key(pos_datum.pos_user_stake_key),
+      address: user_address,
       value: assets.from_lovelace(2_000_000)
         |> assets.add(share_policy_id, pos_datum.pos_candidate, amount),
       datum: InlineDatum(pos_datum),
@@ -1178,7 +1198,9 @@ test predictions__spend_apply__ada() {
     PositionDatum {
       outref_id: project_info_ref_id,
       pos_user_pkh: #"6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b",
-      pos_user_stake_key: #"c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3",
+      pos_user_stake_key: Some(
+        #"c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3",
+      ),
       pos_type: BuyPos,
       pos_amount: amount,
       pos_batcher_fee: 30_000,
@@ -1205,10 +1227,16 @@ test predictions__spend_apply__ada() {
         reference_script: None,
       },
     }
+  let user_address =
+    when pos_datum.pos_user_stake_key is {
+      Some(key) ->
+        address.from_verification_key(pos_datum.pos_user_pkh)
+          |> address.with_delegation_key(key)
+      None -> address.from_verification_key(pos_datum.pos_user_pkh)
+    }
   let user_pos_out =
     Output {
-      address: address.from_verification_key(pos_datum.pos_user_pkh)
-        |> address.with_delegation_key(pos_datum.pos_user_stake_key),
+      address: user_address,
       value: assets.from_lovelace(2_000_000)
         |> assets.add(share_policy_id, pos_datum.pos_candidate, amount),
       datum: InlineDatum(pos_datum),
@@ -1440,7 +1468,9 @@ test predictions__spend_reward() {
     PositionDatum {
       outref_id: project_info_ref_id,
       pos_user_pkh: #"6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b",
-      pos_user_stake_key: #"c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3",
+      pos_user_stake_key: Some(
+        #"c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3",
+      ),
       pos_type: RewardPos,
       pos_amount: amount,
       pos_batcher_fee: 300_000,
@@ -1467,10 +1497,16 @@ test predictions__spend_reward() {
         reference_script: None,
       },
     }
+  let user_address =
+    when pos_datum.pos_user_stake_key is {
+      Some(key) ->
+        address.from_verification_key(pos_datum.pos_user_pkh)
+          |> address.with_delegation_key(key)
+      None -> address.from_verification_key(pos_datum.pos_user_pkh)
+    }
   let user_pos_out =
     Output {
-      address: address.from_verification_key(pos_datum.pos_user_pkh)
-        |> address.with_delegation_key(pos_datum.pos_user_stake_key),
+      address: user_address,
       value: assets.from_lovelace(2_000_000)
         |> assets.add(
             project_info_datum.payment_policy_id,
@@ -1730,7 +1766,9 @@ test predictions__spend_reward__ada() {
     PositionDatum {
       outref_id: project_info_ref_id,
       pos_user_pkh: #"6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b",
-      pos_user_stake_key: #"c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3",
+      pos_user_stake_key: Some(
+        #"c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3",
+      ),
       pos_type: RewardPos,
       pos_amount: amount,
       pos_batcher_fee: 300_000,
@@ -1757,10 +1795,16 @@ test predictions__spend_reward__ada() {
         reference_script: None,
       },
     }
+  let user_address =
+    when pos_datum.pos_user_stake_key is {
+      Some(key) ->
+        address.from_verification_key(pos_datum.pos_user_pkh)
+          |> address.with_delegation_key(key)
+      None -> address.from_verification_key(pos_datum.pos_user_pkh)
+    }
   let user_pos_out =
     Output {
-      address: address.from_verification_key(pos_datum.pos_user_pkh)
-        |> address.with_delegation_key(pos_datum.pos_user_stake_key),
+      address: user_address,
       value: assets.from_lovelace(2_000_000)
         |> assets.add(
             project_info_datum.payment_policy_id,
@@ -2020,7 +2064,9 @@ test predictions__spend_refund() {
     PositionDatum {
       outref_id: project_info_ref_id,
       pos_user_pkh: #"6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b",
-      pos_user_stake_key: #"c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3",
+      pos_user_stake_key: Some(
+        #"c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3",
+      ),
       pos_type: RefundPos,
       pos_amount: amount,
       pos_batcher_fee: 300_000,
@@ -2047,10 +2093,16 @@ test predictions__spend_refund() {
         reference_script: None,
       },
     }
+  let user_address =
+    when pos_datum.pos_user_stake_key is {
+      Some(key) ->
+        address.from_verification_key(pos_datum.pos_user_pkh)
+          |> address.with_delegation_key(key)
+      None -> address.from_verification_key(pos_datum.pos_user_pkh)
+    }
   let user_pos_out =
     Output {
-      address: address.from_verification_key(pos_datum.pos_user_pkh)
-        |> address.with_delegation_key(pos_datum.pos_user_stake_key),
+      address: user_address,
       value: assets.from_lovelace(2_000_000)
         |> assets.add(
             project_info_datum.payment_policy_id,
@@ -2281,7 +2333,9 @@ test predictions__spend_refund__ada() {
     PositionDatum {
       outref_id: project_info_ref_id,
       pos_user_pkh: #"6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b",
-      pos_user_stake_key: #"c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3",
+      pos_user_stake_key: Some(
+        #"c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3",
+      ),
       pos_type: RefundPos,
       pos_amount: amount,
       pos_batcher_fee: 300_000,
@@ -2308,10 +2362,16 @@ test predictions__spend_refund__ada() {
         reference_script: None,
       },
     }
+  let user_address =
+    when pos_datum.pos_user_stake_key is {
+      Some(key) ->
+        address.from_verification_key(pos_datum.pos_user_pkh)
+          |> address.with_delegation_key(key)
+      None -> address.from_verification_key(pos_datum.pos_user_pkh)
+    }
   let user_pos_out =
     Output {
-      address: address.from_verification_key(pos_datum.pos_user_pkh)
-        |> address.with_delegation_key(pos_datum.pos_user_stake_key),
+      address: user_address,
       value: assets.from_lovelace(2_000_000)
         |> assets.add(
             project_info_datum.payment_policy_id,

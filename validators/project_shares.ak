@@ -288,7 +288,7 @@ test shares__mint_buy() {
     PositionDatum {
       outref_id: project_info_ref_id,
       pos_user_pkh,
-      pos_user_stake_key,
+      pos_user_stake_key: Some(pos_user_stake_key),
       pos_type: BuyPos,
       pos_amount: 10,
       pos_batcher_fee: 300_000,
@@ -389,7 +389,7 @@ test shares__mint_buy_incorrect_time_range() fail {
     PositionDatum {
       outref_id: project_info_ref_id,
       pos_user_pkh,
-      pos_user_stake_key,
+      pos_user_stake_key: Some(pos_user_stake_key),
       pos_type: BuyPos,
       pos_amount: 10,
       pos_batcher_fee: 300_000,
@@ -490,7 +490,7 @@ test shares__mint_buy__incorrect_fee() fail {
     PositionDatum {
       outref_id: project_info_ref_id,
       pos_user_pkh,
-      pos_user_stake_key,
+      pos_user_stake_key: Some(pos_user_stake_key),
       pos_type: BuyPos,
       pos_amount: 10,
       pos_batcher_fee: 300_000,
@@ -591,7 +591,7 @@ test shares__mint_buy__incorrect_mint() fail {
     PositionDatum {
       outref_id: project_info_ref_id,
       pos_user_pkh,
-      pos_user_stake_key,
+      pos_user_stake_key: Some(pos_user_stake_key),
       pos_type: BuyPos,
       pos_amount: 10,
       pos_batcher_fee: 300_000,
@@ -692,7 +692,7 @@ test shares__mint_buy__incorrect_candidate() fail {
     PositionDatum {
       outref_id: project_info_ref_id,
       pos_user_pkh,
-      pos_user_stake_key,
+      pos_user_stake_key: Some(pos_user_stake_key),
       pos_type: BuyPos,
       pos_amount: 10,
       pos_batcher_fee: 300_000,
@@ -793,7 +793,7 @@ test shares__mint_buy__ada_payment() {
     PositionDatum {
       outref_id: project_info_ref_id,
       pos_user_pkh,
-      pos_user_stake_key,
+      pos_user_stake_key: Some(pos_user_stake_key),
       pos_type: BuyPos,
       pos_amount: 10,
       pos_batcher_fee: 300_000,

@@ -49,7 +49,9 @@ test positions__spend_buy_pos() {
     PositionDatum {
       outref_id: project_info_ref_id,
       pos_user_pkh: #"6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b",
-      pos_user_stake_key: #"c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3",
+      pos_user_stake_key: Some(
+        #"c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3",
+      ),
       pos_type: BuyPos,
       pos_amount: 10,
       pos_batcher_fee: 30_000,
@@ -130,7 +132,9 @@ test positions__spend_reward_pos() {
     PositionDatum {
       outref_id: project_info_ref_id,
       pos_user_pkh: #"6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b",
-      pos_user_stake_key: #"c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3",
+      pos_user_stake_key: Some(
+        #"c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3",
+      ),
       pos_type: RewardPos,
       pos_amount: 10,
       pos_batcher_fee: 30_000,
@@ -211,7 +215,9 @@ test positions__spend_refund_pos() {
     PositionDatum {
       outref_id: project_info_ref_id,
       pos_user_pkh: #"6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b",
-      pos_user_stake_key: #"c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3",
+      pos_user_stake_key: Some(
+        #"c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe3",
+      ),
       pos_type: RefundPos,
       pos_amount: 10,
       pos_batcher_fee: 30_000,
