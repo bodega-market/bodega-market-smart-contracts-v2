@@ -62,27 +62,30 @@ validator project_shares(params: ShareParams) {
             fn(output) {
               let Output { address: Address { payment_credential, .. }, .. } =
                 output
-              expect payment_credential == pos_script_cred
-              expect InlineDatum(pos_output_datum) = output.datum
-              expect pos_datum: PositionDatum = pos_output_datum
-              expect pos_datum.pos_batcher_fee > 0 && pos_datum.pos_amount > 0
-              expect pos_datum.outref_id == project_info_datum.outref_id
-              expect pos_datum.pos_type == BuyPos
-              let admin_fee_amount =
-                pos_datum.pos_amount * project_info_datum.admin_fee_percent * decimals / multiplier
-              let min_lovelace =
-                pos_datum.pos_batcher_fee + project_info_datum.envelope_amount
-              let min_payment =
-                pos_datum.pos_amount * decimals + admin_fee_amount
-              let out_pos_lovelace = assets.lovelace_of(output.value)
-              if project_info_datum.payment_policy_id == assets.ada_policy_id {
-                out_pos_lovelace >= min_payment + min_lovelace
+              if payment_credential != pos_script_cred {
+                False
               } else {
-                out_pos_lovelace >= min_lovelace && assets.quantity_of(
-                  output.value,
-                  project_info_datum.payment_policy_id,
-                  project_info_datum.payment_token_name,
-                ) >= min_payment
+                expect InlineDatum(pos_output_datum) = output.datum
+                expect pos_datum: PositionDatum = pos_output_datum
+                expect pos_datum.pos_batcher_fee > 0 && pos_datum.pos_amount > 0
+                expect pos_datum.outref_id == project_info_datum.outref_id
+                expect pos_datum.pos_type == BuyPos
+                let admin_fee_amount =
+                  pos_datum.pos_amount * project_info_datum.admin_fee_percent * decimals / multiplier
+                let min_lovelace =
+                  pos_datum.pos_batcher_fee + project_info_datum.envelope_amount
+                let min_payment =
+                  pos_datum.pos_amount * decimals + admin_fee_amount
+                let out_pos_lovelace = assets.lovelace_of(output.value)
+                if project_info_datum.payment_policy_id == assets.ada_policy_id {
+                  out_pos_lovelace >= min_payment + min_lovelace
+                } else {
+                  out_pos_lovelace >= min_lovelace && assets.quantity_of(
+                    output.value,
+                    project_info_datum.payment_policy_id,
+                    project_info_datum.payment_token_name,
+                  ) >= min_payment
+                }
               }
             },
           )
