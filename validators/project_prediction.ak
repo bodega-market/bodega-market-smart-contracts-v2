@@ -451,11 +451,7 @@ validator project_prediction(
           fn(in_out: ((ByteArray, Int), (ByteArray, Int)), acc) {
             let ((in_cand, in_amount), (out_cand, out_amount)) = in_out
             expect in_cand == out_cand
-            if in_cand == oracle_datum.candidate {
-              in_amount == out_amount + total_in_shares && acc
-            } else {
-              in_amount == out_amount && acc
-            }
+            in_amount == out_amount && acc
           },
         )
       }
@@ -1439,7 +1435,7 @@ test predictions__spend_reward() {
     ProjectPredictionDatum {
       outref_id: project_info_ref_id,
       total_fee: pred_datum.total_fee + fee,
-      predictions: [("cand_1", 90), ("cand_2", 400)],
+      predictions: [("cand_1", 100), ("cand_2", 400)],
     }
   let pred_out =
     Output {
@@ -1737,7 +1733,7 @@ test predictions__spend_reward__ada() {
     ProjectPredictionDatum {
       outref_id: project_info_ref_id,
       total_fee: pred_datum.total_fee + fee,
-      predictions: [("cand_1", 90), ("cand_2", 400)],
+      predictions: [("cand_1", 100), ("cand_2", 400)],
     }
   let pred_out =
     Output {
