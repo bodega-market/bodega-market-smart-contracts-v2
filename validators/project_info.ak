@@ -12,7 +12,7 @@ use cardano/transaction.{
 
 pub type PMSpendRedeemer {
   Update { own_in_idx: Int, own_out_idx: Int }
-  Slash { protocol_manager_in_idx: Int }
+  Close { protocol_manager_in_idx: Int }
 }
 
 validator project_info(protocol_manager_nft: Asset) {
@@ -47,7 +47,7 @@ validator project_info(protocol_manager_nft: Asset) {
           }
         True
       }
-      Slash { protocol_manager_in_idx } -> {
+      Close { protocol_manager_in_idx } -> {
         expect Some(protocol_manager_input) =
           list.at(inputs, protocol_manager_in_idx)
         expect
@@ -270,7 +270,7 @@ test project_info__spend_fail() fail {
   )
 }
 
-test project_info__spend__slash() {
+test project_info__spend__close() {
   let project_info_ref_id =
     OutputReference {
       transaction_id: #"2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c",
@@ -330,7 +330,7 @@ test project_info__spend__slash() {
         reference_script: None,
       },
     }
-  let project_info_redeemer = Slash { protocol_manager_in_idx: 0 }
+  let project_info_redeemer = Close { protocol_manager_in_idx: 0 }
   let tx =
     Transaction {
       inputs: [project_manager_input, project_info_input],

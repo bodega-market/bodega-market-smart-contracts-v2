@@ -56,6 +56,7 @@ pub type ProjectPredictionRedeemer {
     license_idx: Int,
     treasury_out_idx: Int,
   }
+  Close { project_info_idx: Int, protocol_setting_ref_idx: Int }
 }
 
 validator project_prediction(
@@ -776,6 +777,27 @@ validator project_prediction(
         expect own_input_datum.outref_id == own_output_datum.outref_id
         expect own_input_datum.predictions == own_output_datum.predictions
         own_output_datum.total_fee == 0
+      }
+      Close { project_info_idx, protocol_setting_ref_idx } -> {
+        let Transaction { inputs, reference_inputs, .. } = self
+        expect Some(project_info_ref_input) = list.at(inputs, project_info_idx)
+        expect Some(ref_protocol_setting_input) =
+          list.at(reference_inputs, protocol_setting_ref_idx)
+        expect
+          assets.quantity_of(
+            ref_protocol_setting_input.output.value,
+            psettings_nft_policy_id,
+            psettings_nft_tn,
+          ) == 1
+        expect InlineDatum(protocol_setting_inline_datum) =
+          ref_protocol_setting_input.output.datum
+        expect protocol_setting_datum: PSettingDatum =
+          protocol_setting_inline_datum
+        assets.quantity_of(
+          project_info_ref_input.output.value,
+          protocol_setting_datum.project_authtoken_policy_id,
+          protocol_setting_datum.project_info_token_name,
+        ) == 1
       }
     }
   }
@@ -2900,6 +2922,152 @@ test predictions__spend_withdraw_admin_fee__ada() {
       license_idx: 1,
       treasury_out_idx: 1,
     }
+  project_prediction.spend(
+    protocol_nft_policy_id,
+    psetting_nft_tn,
+    Some(pred_datum),
+    pred_redeemer,
+    own_ref,
+    tx,
+  )
+}
+
+test predictions__spend_close() {
+  let project_prediction_script_hash =
+    #"9655d06c0a2f02d9e200aa6f8db00d760acf62c0ebaa5ff2c36e9eeb"
+  let protocol_stake_key_hash =
+    #"eb9655d06c0a2f02d9e200aa6f8db00d760acf62c0ebaa5ff2c36e9e"
+  let psetting_datum =
+    PSettingDatum {
+      pledge: 100_000_000,
+      pledge_policy_id: #"",
+      pledge_token_name: #"",
+      protocol_treasury_script_hash: #"b4971034feee",
+      share_ratio: 20000,
+      open_fee: 20_000_000,
+      open_fee_policy_id: #"",
+      open_fee_token_name: #"",
+      project_authtoken_policy_id: project_info_nft_policy_id,
+      project_info_token_name: project_info_nft_tn,
+      project_prediction_token_name: project_prediction_nft_tn,
+      protocol_stake_key_hash,
+    }
+  let psetting_ref =
+    OutputReference {
+      transaction_id: #"b4971034feee28d07f157faf99b850",
+      output_index: 0,
+    }
+  let psetting_ref_input =
+    Input {
+      output_reference: psetting_ref,
+      output: Output {
+        address: from_script(#"11"),
+        value: assets.zero
+          |> assets.add(protocol_nft_policy_id, psetting_nft_tn, 1),
+        datum: InlineDatum(psetting_datum),
+        reference_script: None,
+      },
+    }
+  let project_info_ref_id =
+    OutputReference {
+      transaction_id: #"d07f157faf99b850b4971034feee28",
+      output_index: 0,
+    }
+  let project_info_datum =
+    ProjectInfoDatum {
+      outref_id: project_info_ref_id,
+      owner_pkh: #"f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50",
+      project_name: "test",
+      deadline: 123_456,
+      payment_policy_id: #"",
+      payment_token_name: "",
+      batcher_policy_id: #"6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e",
+      position_script_hash: #"702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86",
+      share_policy_id: #"2d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c425",
+      oracle_policy_id: #"f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50f4c9",
+      oracle_token_name: "oracle_token_name",
+      admin_fee_percent: 500,
+      // ^ base 10_000
+      envelope_amount: 2_000_000,
+      candidates: ["cand_1", "cand_2"],
+    }
+  let project_info_ref =
+    OutputReference {
+      transaction_id: #"b4971034feee28d07f157faf99b850",
+      output_index: 0,
+    }
+  let project_info_input =
+    Input {
+      output_reference: project_info_ref,
+      output: Output {
+        address: from_script(#"11"),
+        value: assets.zero
+          |> assets.add(project_info_nft_policy_id, project_info_nft_tn, 1),
+        datum: InlineDatum(project_info_datum),
+        reference_script: None,
+      },
+    }
+  let pred_datum =
+    ProjectPredictionDatum {
+      outref_id: project_info_ref_id,
+      total_fee: 0,
+      predictions: [("cand_1", 100), ("cand_2", 400)],
+    }
+  let own_ref =
+    OutputReference {
+      transaction_id: #"b4971034feee28d07f157faf99b850f856d8da3494c70b19b521cfe690258e26",
+      output_index: 0,
+    }
+  let pred_input =
+    Input {
+      output_reference: own_ref,
+      output: Output {
+        address: from_script(project_prediction_script_hash)
+          |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
+        value: assets.from_lovelace(2_000_000)
+          |> assets.add(
+              psetting_datum.project_authtoken_policy_id,
+              psetting_datum.project_prediction_token_name,
+              1,
+            )
+          |> assets.add(
+              project_info_datum.payment_policy_id,
+              project_info_datum.payment_token_name,
+              525 * decimals,
+            ),
+        datum: InlineDatum(pred_datum),
+        reference_script: None,
+      },
+    }
+  let tx =
+    Transaction {
+      inputs: [pred_input, project_info_input],
+      reference_inputs: [psetting_ref_input],
+      outputs: [],
+      fee: 0,
+      mint: assets.zero,
+      certificates: [],
+      withdrawals: [],
+      validity_range: Interval {
+        lower_bound: IntervalBound {
+          bound_type: Finite(1727453227635),
+          is_inclusive: False,
+        },
+        upper_bound: IntervalBound {
+          bound_type: Finite(1727456400000),
+          is_inclusive: False,
+        },
+      },
+      extra_signatories: [],
+      redeemers: [],
+      datums: dict.empty,
+      id: #"0000000000000000000000000000000000000000000000000000000000000000",
+      votes: [],
+      proposal_procedures: [],
+      current_treasury_amount: None,
+      treasury_donation: None,
+    }
+  let pred_redeemer = Close { project_info_idx: 1, protocol_setting_ref_idx: 0 }
   project_prediction.spend(
     protocol_nft_policy_id,
     psetting_nft_tn,
