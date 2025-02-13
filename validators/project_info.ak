@@ -76,6 +76,9 @@ test project_info__spend_success() {
     ProjectInfoDatum {
       outref_id: project_info_ref_id,
       owner_pkh: #"f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50",
+      owner_stake_key: Some(
+        #"c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648",
+      ),
       project_name: "test",
       deadline: 123_456,
       payment_policy_id: #"3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe",
@@ -116,6 +119,9 @@ test project_info__spend_success() {
     ProjectInfoDatum {
       outref_id: project_info_ref_id,
       owner_pkh: #"f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50",
+      owner_stake_key: Some(
+        #"c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648",
+      ),
       project_name: "test",
       deadline: 123_456,
       payment_policy_id: #"3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe",
@@ -178,6 +184,9 @@ test project_info__spend_fail() fail {
     ProjectInfoDatum {
       outref_id: project_info_ref_id,
       owner_pkh: #"f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50",
+      owner_stake_key: Some(
+        #"c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648",
+      ),
       project_name: "test",
       deadline: 123_456,
       payment_policy_id: #"3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe",
@@ -218,6 +227,9 @@ test project_info__spend_fail() fail {
     ProjectInfoDatum {
       outref_id: project_info_ref_id,
       owner_pkh: #"f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50",
+      owner_stake_key: Some(
+        #"c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648",
+      ),
       project_name: "test",
       deadline: 123_456,
       payment_policy_id: #"3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe",
@@ -280,6 +292,9 @@ test project_info__spend__close() {
     ProjectInfoDatum {
       outref_id: project_info_ref_id,
       owner_pkh: #"f4c9f9c4252d86702c2f4c2e49e6648c7cffe3c8f2b6b7d779788f50",
+      owner_stake_key: Some(
+        #"c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648",
+      ),
       project_name: "test",
       deadline: 123_456,
       payment_policy_id: #"3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c2e49e6648c7cffe",

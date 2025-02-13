@@ -13,6 +13,7 @@ pub type Asset {
 pub type ProjectInfoDatum {
   outref_id: OutputReference,
   owner_pkh: ByteArray,
+  owner_stake_key: Option<PubKeyHash>,
   project_name: ByteArray,
   deadline: Int,
   payment_policy_id: ByteArray,
