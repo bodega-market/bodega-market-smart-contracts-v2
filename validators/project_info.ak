@@ -11,8 +11,8 @@ use cardano/transaction.{
 }
 
 pub type PMSpendRedeemer {
-  Update { own_in_idx: Int, own_out_idx: Int }
-  Close { protocol_manager_in_idx: Int }
+  CreatorUpdate { own_in_idx: Int, own_out_idx: Int }
+  AdminUpdate { protocol_manager_in_idx: Int }
 }
 
 validator project_info(protocol_manager_nft: Asset) {
@@ -24,7 +24,7 @@ validator project_info(protocol_manager_nft: Asset) {
   ) {
     let Transaction { inputs, outputs, extra_signatories, .. } = self
     when redeemer is {
-      Update { own_in_idx, own_out_idx } -> {
+      CreatorUpdate { own_in_idx, own_out_idx } -> {
         expect Some(own_datum) = datum
         expect Some(own_input) = list.at(inputs, own_in_idx)
         expect Some(own_output) = list.at(outputs, own_out_idx)
@@ -37,6 +37,7 @@ validator project_info(protocol_manager_nft: Asset) {
             own_datum.payment_policy_id == own_output_datum.payment_policy_id,
             own_datum.payment_token_name == own_output_datum.payment_token_name,
             own_datum.batcher_policy_id == own_output_datum.batcher_policy_id,
+            own_datum.oracle_policy_id == own_output_datum.oracle_policy_id,
             own_datum.position_script_hash == own_output_datum.position_script_hash,
             own_datum.share_policy_id == own_output_datum.share_policy_id,
             own_datum.admin_fee_percent == own_output_datum.admin_fee_percent,
@@ -47,7 +48,7 @@ validator project_info(protocol_manager_nft: Asset) {
           }
         True
       }
-      Close { protocol_manager_in_idx } -> {
+      AdminUpdate { protocol_manager_in_idx } -> {
         expect Some(protocol_manager_input) =
           list.at(inputs, protocol_manager_in_idx)
         expect
@@ -109,7 +110,7 @@ test project_info__spend_success() {
         reference_script: None,
       },
     }
-  let project_info_redeemer = Update { own_in_idx: 0, own_out_idx: 0 }
+  let project_info_redeemer = CreatorUpdate { own_in_idx: 0, own_out_idx: 0 }
   let project_info_ref_id =
     OutputReference {
       transaction_id: #"2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c",
@@ -217,7 +218,7 @@ test project_info__spend_fail() fail {
         reference_script: None,
       },
     }
-  let project_info_redeemer = Update { own_in_idx: 0, own_out_idx: 0 }
+  let project_info_redeemer = CreatorUpdate { own_in_idx: 0, own_out_idx: 0 }
   let project_info_ref_id =
     OutputReference {
       transaction_id: #"2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c",
@@ -282,7 +283,7 @@ test project_info__spend_fail() fail {
   )
 }
 
-test project_info__spend__close() {
+test project_info__spend__admin_update() {
   let project_info_ref_id =
     OutputReference {
       transaction_id: #"2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c",
@@ -345,7 +346,7 @@ test project_info__spend__close() {
         reference_script: None,
       },
     }
-  let project_info_redeemer = Close { protocol_manager_in_idx: 0 }
+  let project_info_redeemer = AdminUpdate { protocol_manager_in_idx: 0 }
   let tx =
     Transaction {
       inputs: [project_manager_input, project_info_input],

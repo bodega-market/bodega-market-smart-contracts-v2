@@ -881,7 +881,9 @@ test predictions__spend_apply() {
       output_reference: project_info_ref,
       output: Output {
         address: from_script(project_info_script_hash)
-          |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
+          |> address.with_delegation_script(
+              psetting_datum.protocol_stake_key_hash,
+            ),
         value: assets.zero
           |> assets.add(
               psetting_datum.project_authtoken_policy_id,
@@ -908,7 +910,9 @@ test predictions__spend_apply() {
       output_reference: own_ref,
       output: Output {
         address: from_script(project_prediction_script_hash)
-          |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
+          |> address.with_delegation_script(
+              psetting_datum.protocol_stake_key_hash,
+            ),
         value: assets.from_lovelace(2_000_000)
           |> assets.add(
               psetting_datum.project_authtoken_policy_id,
@@ -930,7 +934,9 @@ test predictions__spend_apply() {
   let pred_out =
     Output {
       address: from_script(project_prediction_script_hash)
-        |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
+        |> address.with_delegation_script(
+            psetting_datum.protocol_stake_key_hash,
+          ),
       value: assets.from_lovelace(2_000_000)
         |> assets.add(
             psetting_datum.project_authtoken_policy_id,
@@ -1149,7 +1155,9 @@ test predictions__spend_apply__ada() {
       output_reference: project_info_ref,
       output: Output {
         address: from_script(project_info_script_hash)
-          |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
+          |> address.with_delegation_script(
+              psetting_datum.protocol_stake_key_hash,
+            ),
         value: assets.zero
           |> assets.add(
               psetting_datum.project_authtoken_policy_id,
@@ -1176,7 +1184,9 @@ test predictions__spend_apply__ada() {
       output_reference: own_ref,
       output: Output {
         address: from_script(project_prediction_script_hash)
-          |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
+          |> address.with_delegation_script(
+              psetting_datum.protocol_stake_key_hash,
+            ),
         value: assets.from_lovelace(2_000_000)
           |> assets.add(
               psetting_datum.project_authtoken_policy_id,
@@ -1198,7 +1208,9 @@ test predictions__spend_apply__ada() {
   let pred_out =
     Output {
       address: from_script(project_prediction_script_hash)
-        |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
+        |> address.with_delegation_script(
+            psetting_datum.protocol_stake_key_hash,
+          ),
       value: assets.from_lovelace(2_000_000)
         |> assets.add(
             psetting_datum.project_authtoken_policy_id,
@@ -1417,7 +1429,9 @@ test predictions__spend_reward() {
       output_reference: project_info_ref,
       output: Output {
         address: from_script(project_info_script_hash)
-          |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
+          |> address.with_delegation_script(
+              psetting_datum.protocol_stake_key_hash,
+            ),
         value: assets.zero
           |> assets.add(
               psetting_datum.project_authtoken_policy_id,
@@ -1444,7 +1458,9 @@ test predictions__spend_reward() {
       output_reference: own_ref,
       output: Output {
         address: from_script(project_prediction_script_hash)
-          |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
+          |> address.with_delegation_script(
+              psetting_datum.protocol_stake_key_hash,
+            ),
         value: assets.from_lovelace(2_000_000)
           |> assets.add(
               psetting_datum.project_authtoken_policy_id,
@@ -1471,7 +1487,9 @@ test predictions__spend_reward() {
   let pred_out =
     Output {
       address: from_script(project_prediction_script_hash)
-        |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
+        |> address.with_delegation_script(
+            psetting_datum.protocol_stake_key_hash,
+          ),
       value: assets.from_lovelace(2_000_000)
         |> assets.add(
             psetting_datum.project_authtoken_policy_id,
@@ -1718,7 +1736,9 @@ test predictions__spend_reward__ada() {
       output_reference: project_info_ref,
       output: Output {
         address: from_script(project_info_script_hash)
-          |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
+          |> address.with_delegation_script(
+              psetting_datum.protocol_stake_key_hash,
+            ),
         value: assets.zero
           |> assets.add(
               psetting_datum.project_authtoken_policy_id,
@@ -1745,7 +1765,9 @@ test predictions__spend_reward__ada() {
       output_reference: own_ref,
       output: Output {
         address: from_script(project_prediction_script_hash)
-          |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
+          |> address.with_delegation_script(
+              psetting_datum.protocol_stake_key_hash,
+            ),
         value: assets.from_lovelace(2_000_000)
           |> assets.add(
               psetting_datum.project_authtoken_policy_id,
@@ -1772,7 +1794,9 @@ test predictions__spend_reward__ada() {
   let pred_out =
     Output {
       address: from_script(project_prediction_script_hash)
-        |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
+        |> address.with_delegation_script(
+            psetting_datum.protocol_stake_key_hash,
+          ),
       value: assets.from_lovelace(2_000_000)
         |> assets.add(
             psetting_datum.project_authtoken_policy_id,
@@ -2019,7 +2043,9 @@ test predictions__spend_refund() {
       output_reference: project_info_ref,
       output: Output {
         address: from_script(project_info_script_hash)
-          |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
+          |> address.with_delegation_script(
+              psetting_datum.protocol_stake_key_hash,
+            ),
         value: assets.zero
           |> assets.add(
               psetting_datum.project_authtoken_policy_id,
@@ -2046,7 +2072,9 @@ test predictions__spend_refund() {
       output_reference: own_ref,
       output: Output {
         address: from_script(project_prediction_script_hash)
-          |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
+          |> address.with_delegation_script(
+              psetting_datum.protocol_stake_key_hash,
+            ),
         value: assets.from_lovelace(2_000_000)
           |> assets.add(
               psetting_datum.project_authtoken_policy_id,
@@ -2073,7 +2101,9 @@ test predictions__spend_refund() {
   let pred_out =
     Output {
       address: from_script(project_prediction_script_hash)
-        |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
+        |> address.with_delegation_script(
+            psetting_datum.protocol_stake_key_hash,
+          ),
       value: assets.from_lovelace(2_000_000)
         |> assets.add(
             psetting_datum.project_authtoken_policy_id,
@@ -2318,7 +2348,9 @@ test predictions__spend_refund__ada() {
       output_reference: own_ref,
       output: Output {
         address: from_script(project_prediction_script_hash)
-          |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
+          |> address.with_delegation_script(
+              psetting_datum.protocol_stake_key_hash,
+            ),
         value: assets.from_lovelace(2_000_000)
           |> assets.add(
               psetting_datum.project_authtoken_policy_id,
@@ -2345,7 +2377,9 @@ test predictions__spend_refund__ada() {
   let pred_out =
     Output {
       address: from_script(project_prediction_script_hash)
-        |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
+        |> address.with_delegation_script(
+            psetting_datum.protocol_stake_key_hash,
+          ),
       value: assets.from_lovelace(2_000_000)
         |> assets.add(
             psetting_datum.project_authtoken_policy_id,
@@ -2570,7 +2604,9 @@ test predictions__spend_withdraw_admin_fee() {
       output_reference: project_info_ref,
       output: Output {
         address: from_script(project_info_script_hash)
-          |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
+          |> address.with_delegation_script(
+              psetting_datum.protocol_stake_key_hash,
+            ),
         value: assets.zero
           |> assets.add(
               psetting_datum.project_authtoken_policy_id,
@@ -2597,7 +2633,9 @@ test predictions__spend_withdraw_admin_fee() {
       output_reference: own_ref,
       output: Output {
         address: from_script(project_prediction_script_hash)
-          |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
+          |> address.with_delegation_script(
+              psetting_datum.protocol_stake_key_hash,
+            ),
         value: assets.from_lovelace(2_000_000)
           |> assets.add(
               psetting_datum.project_authtoken_policy_id,
@@ -2622,7 +2660,9 @@ test predictions__spend_withdraw_admin_fee() {
   let pred_out =
     Output {
       address: from_script(project_prediction_script_hash)
-        |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
+        |> address.with_delegation_script(
+            psetting_datum.protocol_stake_key_hash,
+          ),
       value: assets.from_lovelace(2_000_000)
         |> assets.add(
             psetting_datum.project_authtoken_policy_id,
@@ -2800,7 +2840,9 @@ test predictions__spend_withdraw_admin_fee__ada() {
       output_reference: project_info_ref,
       output: Output {
         address: from_script(project_info_script_hash)
-          |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
+          |> address.with_delegation_script(
+              psetting_datum.protocol_stake_key_hash,
+            ),
         value: assets.zero
           |> assets.add(
               psetting_datum.project_authtoken_policy_id,
@@ -2827,7 +2869,9 @@ test predictions__spend_withdraw_admin_fee__ada() {
       output_reference: own_ref,
       output: Output {
         address: from_script(project_prediction_script_hash)
-          |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
+          |> address.with_delegation_script(
+              psetting_datum.protocol_stake_key_hash,
+            ),
         value: assets.from_lovelace(2_000_000)
           |> assets.add(
               psetting_datum.project_authtoken_policy_id,
@@ -2852,7 +2896,9 @@ test predictions__spend_withdraw_admin_fee__ada() {
   let pred_out =
     Output {
       address: from_script(project_prediction_script_hash)
-        |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
+        |> address.with_delegation_script(
+            psetting_datum.protocol_stake_key_hash,
+          ),
       value: assets.from_lovelace(2_000_000)
         |> assets.add(
             psetting_datum.project_authtoken_policy_id,
@@ -3050,7 +3096,9 @@ test predictions__spend_close() {
       output_reference: own_ref,
       output: Output {
         address: from_script(project_prediction_script_hash)
-          |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
+          |> address.with_delegation_script(
+              psetting_datum.protocol_stake_key_hash,
+            ),
         value: assets.from_lovelace(2_000_000)
           |> assets.add(
               psetting_datum.project_authtoken_policy_id,

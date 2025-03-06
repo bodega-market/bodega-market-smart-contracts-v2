@@ -53,7 +53,11 @@ test protocol_authtoken_mp_success() {
       string.to_bytearray(@"PROTOCOL_SETTINGS_NFT"),
       1,
     )
-      |> assets.add(own_policy_id, string.to_bytearray(@"PROTOCOL_MANAGER_NFT"), 1)
+      |> assets.add(
+          own_policy_id,
+          string.to_bytearray(@"PROTOCOL_MANAGER_NFT"),
+          1,
+        )
   let tx =
     Transaction {
       inputs: [seed_input],

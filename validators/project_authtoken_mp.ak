@@ -245,7 +245,9 @@ test project_authtoken_mp_success() {
   let project_info_output =
     Output {
       address: from_script(project_info_script_hash)
-        |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
+        |> address.with_delegation_script(
+            psetting_datum.protocol_stake_key_hash,
+          ),
       value: assets.from_lovelace(100_000_000)
         |> assets.add(own_policy_id, project_info_nft_tn, 1),
       datum: InlineDatum(project_info_datum),
@@ -260,7 +262,9 @@ test project_authtoken_mp_success() {
   let pred_output =
     Output {
       address: from_script(project_prediction_script_hash)
-        |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
+        |> address.with_delegation_script(
+            psetting_datum.protocol_stake_key_hash,
+          ),
       value: assets.from_lovelace(2_000_000)
         |> assets.add(own_policy_id, project_prediction_nft_tn, 1),
       datum: InlineDatum(pred_datum),
@@ -269,7 +273,9 @@ test project_authtoken_mp_success() {
   let protocol_treasury_output =
     Output {
       address: from_script(psetting_datum.protocol_treasury_script_hash)
-        |> address.with_delegation_script(psetting_datum.protocol_stake_key_hash),
+        |> address.with_delegation_script(
+            psetting_datum.protocol_stake_key_hash,
+          ),
       value: assets.zero
         |> assets.add(
             psetting_datum.open_fee_policy_id,
