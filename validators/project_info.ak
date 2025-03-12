@@ -11,7 +11,11 @@ use cardano/transaction.{
 }
 
 pub type PMSpendRedeemer {
-  CreatorUpdate { own_in_idx: Int, own_out_idx: Int }
+  CreatorUpdate {
+    own_in_idx: Int,
+    own_out_idx: Int,
+    protocol_manager_in_idx: Int,
+  }
   AdminUpdate { protocol_manager_in_idx: Int }
 }
 
@@ -24,7 +28,7 @@ validator project_info(protocol_manager_nft: Asset) {
   ) {
     let Transaction { inputs, outputs, extra_signatories, .. } = self
     when redeemer is {
-      CreatorUpdate { own_in_idx, own_out_idx } -> {
+      CreatorUpdate { own_in_idx, own_out_idx, protocol_manager_in_idx } -> {
         expect Some(own_datum) = datum
         expect Some(own_input) = list.at(inputs, own_in_idx)
         expect Some(own_output) = list.at(outputs, own_out_idx)
@@ -46,6 +50,14 @@ validator project_info(protocol_manager_nft: Asset) {
             own_datum.outref_id == own_output_datum.outref_id,
             list.has(extra_signatories, own_datum.owner_pkh),
           }
+        expect Some(protocol_manager_input) =
+          list.at(inputs, protocol_manager_in_idx)
+        expect
+          assets.quantity_of(
+            protocol_manager_input.output.value,
+            protocol_manager_nft.policy_id,
+            protocol_manager_nft.asset_name,
+          ) == 1
         True
       }
       AdminUpdate { protocol_manager_in_idx } -> {
@@ -110,7 +122,28 @@ test project_info__spend_success() {
         reference_script: None,
       },
     }
-  let project_info_redeemer = CreatorUpdate { own_in_idx: 0, own_out_idx: 0 }
+  let project_manager_ref =
+    OutputReference {
+      transaction_id: #"b4971034feee28d07f157faf99b850",
+      output_index: 0,
+    }
+  let project_manager_input =
+    Input {
+      output_reference: project_manager_ref,
+      output: Output {
+        address: from_script(#"11"),
+        value: assets.zero
+          |> assets.add(
+              pmanager_nft_asset.policy_id,
+              pmanager_nft_asset.asset_name,
+              1,
+            ),
+        datum: NoDatum,
+        reference_script: None,
+      },
+    }
+  let project_info_redeemer =
+    CreatorUpdate { own_in_idx: 0, own_out_idx: 0, protocol_manager_in_idx: 1 }
   let project_info_ref_id =
     OutputReference {
       transaction_id: #"2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c",
@@ -147,7 +180,7 @@ test project_info__spend_success() {
     }
   let tx =
     Transaction {
-      inputs: [project_info_input],
+      inputs: [project_info_input, project_manager_input],
       reference_inputs: [],
       outputs: [project_info_output],
       fee: 0,
@@ -218,7 +251,28 @@ test project_info__spend_fail() fail {
         reference_script: None,
       },
     }
-  let project_info_redeemer = CreatorUpdate { own_in_idx: 0, own_out_idx: 0 }
+  let project_manager_ref =
+    OutputReference {
+      transaction_id: #"b4971034feee28d07f157faf99b850",
+      output_index: 0,
+    }
+  let project_manager_input =
+    Input {
+      output_reference: project_manager_ref,
+      output: Output {
+        address: from_script(#"11"),
+        value: assets.zero
+          |> assets.add(
+              pmanager_nft_asset.policy_id,
+              pmanager_nft_asset.asset_name,
+              1,
+            ),
+        datum: NoDatum,
+        reference_script: None,
+      },
+    }
+  let project_info_redeemer =
+    CreatorUpdate { own_in_idx: 0, own_out_idx: 0, protocol_manager_in_idx: 1 }
   let project_info_ref_id =
     OutputReference {
       transaction_id: #"2e49e6648c7cffe3c8f2b6b7d779788f50f4c9f9c4252d86702c2f4c",
@@ -255,7 +309,7 @@ test project_info__spend_fail() fail {
     }
   let tx =
     Transaction {
-      inputs: [project_info_input],
+      inputs: [project_info_input, project_manager_input],
       reference_inputs: [],
       outputs: [project_info_output],
       fee: 0,

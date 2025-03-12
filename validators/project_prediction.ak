@@ -780,7 +780,7 @@ validator project_prediction(
       }
       Close { project_info_idx, protocol_setting_ref_idx } -> {
         let Transaction { inputs, reference_inputs, .. } = self
-        expect Some(project_info_ref_input) = list.at(inputs, project_info_idx)
+        expect Some(project_info_input) = list.at(inputs, project_info_idx)
         expect Some(ref_protocol_setting_input) =
           list.at(reference_inputs, protocol_setting_ref_idx)
         expect
@@ -794,7 +794,7 @@ validator project_prediction(
         expect protocol_setting_datum: PSettingDatum =
           protocol_setting_inline_datum
         assets.quantity_of(
-          project_info_ref_input.output.value,
+          project_info_input.output.value,
           protocol_setting_datum.project_authtoken_policy_id,
           protocol_setting_datum.project_info_token_name,
         ) == 1
